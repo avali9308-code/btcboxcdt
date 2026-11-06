@@ -1,5 +1,5 @@
 -- BTCBOX seconds policy versioning v1.
--- Additive/source-only migration. Apply ONLY in isolated staging after review.
+-- Additive/source-only migration. Apply after the Seconds base schema (0014); 0015 is a retired no-op and imposes no per-user open-position limit.
 -- 85% is the minimum configurable winning-profit rate; future policy versions may raise it up to 100%.
 -- Existing positions retain their immutable snapshot or legacy 85% fallback.
 -- It does not enable financial cutover or create administrator write endpoints.
