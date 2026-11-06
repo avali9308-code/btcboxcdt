@@ -153,7 +153,6 @@ DECLARE
   v_operation_id uuid;
   v_now timestamptz := clock_timestamp();
   v_settle_at timestamptz;
-  v_constraint_name text;
 BEGIN
   IF coalesce(p_user_id,'')='' OR p_symbol NOT IN ('BTC','ETH','SOL','BNB')
      OR p_direction NOT IN ('up','down') OR p_amount IS NULL OR p_amount<=0
@@ -246,13 +245,9 @@ BEGIN
     'open_price',p_open_price,'policy_version',v_policy.policy_version,
     'settle_at',extract(epoch from v_settle_at)::bigint);
 EXCEPTION WHEN unique_violation THEN
-  GET STACKED DIAGNOSTICS v_constraint_name=CONSTRAINT_NAME;
-  IF v_constraint_name='seconds_contract_positions_one_open_per_user_idx' THEN
-    RETURN jsonb_build_object('ok',false,'code','OPEN_POSITION_EXISTS');
-  END IF;
   RETURN jsonb_build_object('ok',false,'code','IDEMPOTENCY_CONFLICT');
 END;
-$$;
+$;
 
 -- Settlement uses the immutable payout snapshot for newly created positions.
 -- NULL snapshots are legacy positions and retain the historical 85% rule.
