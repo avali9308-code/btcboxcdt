@@ -4,8 +4,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { createRequire } = require('node:module');
 
-const source = fs.readFileSync(path.join(__dirname, '..', 'api-core.js'), 'utf8');
+const apiPath = path.join(__dirname, '..', 'api-core.js');
+const source = fs.readFileSync(apiPath, 'utf8');
+const apiRequire = createRequire(apiPath);
 const ids = {
   source: '123e4567-e89b-42d3-a456-426614174000',
   target: '223e4567-e89b-42d3-a456-426614174001',
@@ -120,7 +123,7 @@ function harness(marker = {}, options = {}) {
   const mod = { exports: {} };
   const factory = vm.runInThisContext('(function(require,module,exports,process,Buffer,fetch,AbortSignal,URL,console){' +
     source + '\nexports.__testHandleRequest = handleRequest;\n})');
-  factory(require, mod, mod.exports, { env }, Buffer, fetchMock, AbortSignal, URL, { warn() {}, error() {} });
+  factory(apiRequire, mod, mod.exports, { env }, Buffer, fetchMock, AbortSignal, URL, { warn() {}, error() {} });
   return {
     run: async (route, body = {}, cookie = sessionToken, method = 'POST') => {
       const result = await mod.exports.__testHandleRequest({
