@@ -139,6 +139,20 @@ export interface WithdrawalRecord {
   paid_at?: string;
 }
 
+export interface WithdrawalRecord {
+  id: string;
+  coin: string;
+  amount: number | string;
+  fee?: number | string;
+  network?: string;
+  address?: string;
+  status: string;
+  time?: string;
+  txid?: string;
+  payout_reference?: string;
+  paid_at?: string;
+}
+
 export interface AccountSnapshot {
   uid: string;
   email: string;
@@ -341,6 +355,101 @@ export async function getSecondsPositions(signal?: AbortSignal): Promise<Seconds
   }
   return payload;
 }
+
+export interface SecondsPolicySnapshot {
+  policy_id: string;
+  policy_version: number;
+  symbols: string[];
+  durations_sec: number[];
+  min_stake: number | string;
+  max_stake: number | string;
+  payout_bps: number;
+  per_user_open_exposure: number | string | null;
+}
+export interface SecondsPolicyResponse {
+  policy: SecondsPolicySnapshot;
+  actions_enabled: boolean;
+}
+export async function getSecondsPolicy(signal?: AbortSignal): Promise<SecondsPolicyResponse> {
+  const payload = await readAuthenticated<SecondsPolicyResponse & { ok: true }>("seconds/policy", signal);
+  const policy = payload.policy;
+  if (!policy || typeof policy.policy_id !== "string" ||
+      !Number.isSafeInteger(policy.policy_version) || policy.policy_version <= 0 ||
+      !Array.isArray(policy.symbols) || !policy.symbols.length ||
+      !policy.symbols.every((symbol) => ["BTC", "ETH", "SOL", "BNB"].includes(symbol)) ||
+      !Array.isArray(policy.durations_sec) || !policy.durations_sec.length ||
+      !policy.durations_sec.every((duration) => [30, 60, 300, 900].includes(duration)) ||
+      !Number.isFinite(Number(policy.min_stake)) || Number(policy.min_stake) <= 0 ||
+      !Number.isFinite(Number(policy.max_stake)) || Number(policy.max_stake) < Number(policy.min_stake) ||
+      !Number.isSafeInteger(policy.payout_bps) || policy.payout_bps < 8500 ||
+      (policy.per_user_open_exposure !== null && (!Number.isFinite(Number(policy.per_user_open_exposure)) || Number(policy.per_user_open_exposure) <= 0)) ||
+      typeof payload.actions_enabled !== "boolean") {
+    throw new ApiError("BTCBOX returned an invalid seconds policy.", 502, "INVALID_SECONDS_POLICY");
+  }
+  return payload;
+}
+
+export interface SecondsOrderInput {
+  request_id: string;
+  symbol: string;
+  direction: "up" | "down";
+  duration_sec: number;
+  amount: string;
+}
+export interface SecondsOrderResult {
+  position_id: string;
+  symbol: string;
+  direction: "up" | "down";
+  amount: number | string;
+  duration_sec: number;
+  open_price: number;
+  settle_at: number;
+  duplicate: boolean;
+}
+export async function submitSecondsOrder(input: SecondsOrderInput): Promise<SecondsOrderResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/seconds/order`, {
+      method: "POST", credentials: "include",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      cache: "no-store", body: JSON.stringify(input),
+    });
+  } catch {
+    throw new ApiError("Order result is unconfirmed. Keep the same request ID and check open positions before retrying.", 0, "NETWORK_ERROR");
+  }
+  const payload = await response.json().catch(() => null) as (SecondsOrderResult & { ok?: boolean; msg?: string; code?: string; need_login?: boolean }) | null;
+  if (!response.ok || !payload || payload.ok !== true ||
+      typeof payload.position_id !== "string" || !/^SC[A-Fa-f0-9]{30}$/.test(payload.position_id) ||
+      !["BTC", "ETH", "SOL", "BNB"].includes(payload.symbol) ||
+      (payload.direction !== "up" && payload.direction !== "down") ||
+      !Number.isFinite(Number(payload.amount)) || Number(payload.amount) <= 0 ||
+      ![30, 60, 300, 900].includes(payload.duration_sec) ||
+      !Number.isFinite(payload.open_price) || payload.open_price <= 0 ||
+      !Number.isSafeInteger(payload.settle_at) || payload.settle_at <= 0) {
+    throw new ApiError(payload?.msg || "Order was not confirmed. Check open positions before retrying.", payload?.need_login ? 401 : response.status, payload?.code);
+  }
+  return payload;
+}
+
+export async function settleSecondsPosition(input: { position_id: string; symbol: string; request_id: string }): Promise<{ settled: boolean; duplicate: boolean }> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/seconds/settle`, {
+      method: "POST", credentials: "include",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      cache: "no-store", body: JSON.stringify(input),
+    });
+  } catch {
+    throw new ApiError("Settlement is not yet confirmed. The position remains visible until the server confirms its result.", 0, "NETWORK_ERROR");
+  }
+  const payload = await response.json().catch(() => null) as { ok?: boolean; settled?: boolean; duplicate?: boolean; need_login?: boolean; msg?: string; code?: string } | null;
+  if (!response.ok || !payload || payload.ok !== true || typeof payload.settled !== "boolean") {
+    throw new ApiError(payload?.msg || "Settlement is not yet confirmed. Refresh the position later.", payload?.need_login ? 401 : response.status, payload?.code);
+  }
+  return { settled: payload.settled, duplicate: !!payload.duplicate };
+}
+
+
 
 export async function logout(): Promise<void> {
   let response: Response;
@@ -631,4 +740,131 @@ export async function getDepositAddress(coin: string, network: string, signal?: 
     throw new ApiError(payload?.msg || "Deposit address is not available for this network.", payload?.need_login ? 401 : response.status, payload?.code);
   }
   return payload.address;
+}
+
+
+export interface AdminSession {
+  user_id: string;
+  status: "active";
+  is_super_admin: boolean;
+  permissions: string[];
+}
+export interface AdminUserRecord {
+  uid: string;
+  email: string;
+  kyc_status?: string;
+  kyc?: { status?: string };
+  frozen: boolean;
+  total_usdt?: string | number;
+  balances?: Record<string, AccountBalance>;
+}
+export interface AdminWithdrawalRecord {
+  id: string;
+  uid: string;
+  coin: string;
+  amount: string;
+  fee: string;
+  network: string;
+  address: string;
+  status: string;
+  payout_reference?: string;
+  paid_at?: string | null;
+}
+export interface AdminConfig {
+  deposit_addresses: Record<string, string>;
+  announcement: string;
+}
+export interface AdminKycRecord {
+  uid: string;
+  email: string;
+  name: string;
+  id_type: string;
+  status: string;
+  submitted_at: string;
+}
+export interface AdminAuditRecord {
+  id: string;
+  time: string;
+  action: string;
+  uid: string;
+  by: string;
+  detail: string;
+  postgres_sync_status: string;
+}
+async function adminRequest<T>(token: string, path: string, options: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+  if (!token || token.length < 20) throw new ApiError("Administrator Supabase session is missing.", 401, "ADMIN_AUTH_REQUIRED");
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/${path}`, {
+      method: options.method || "GET",
+      credentials: "include",
+      cache: "no-store",
+      signal: options.signal,
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}`, ...(options.body === undefined ? {} : { "Content-Type": "application/json" }) },
+      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+    });
+  } catch {
+    throw new ApiError("Administrator request could not reach BTCBOX.", 0, "NETWORK_ERROR");
+  }
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload || payload.ok !== true) {
+    throw new ApiError(payload?.msg || "Administrator request was not accepted.", response.status, payload?.code);
+  }
+  return payload as T;
+}
+export async function getAdminSession(token: string, signal?: AbortSignal) {
+  return adminRequest<AdminSession & { ok: true }>(token, "admin/session", { signal });
+}
+export async function getAdminStats(token: string, signal?: AbortSignal) {
+  return adminRequest<{ ok: true; total_users: number; pending_withdrawals: number; pending_admin_review_withdrawals: number; pending_kyc: number; deposit_addresses: Record<string, string>; announcement: string }>(token, "admin/stats", { signal });
+}
+export async function getAdminUsers(token: string, search = "", signal?: AbortSignal) {
+  const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  return adminRequest<{ ok: true; users: AdminUserRecord[] }>(token, `admin/users${query}`, { signal });
+}
+export async function getAdminUser(token: string, uid: string, signal?: AbortSignal) {
+  return adminRequest<{ ok: true; user: AdminUserRecord }>(token, `admin/user?uid=${encodeURIComponent(uid)}`, { signal });
+}
+export async function getAdminWithdrawals(token: string, signal?: AbortSignal) {
+  return adminRequest<{ ok: true; withdrawals: AdminWithdrawalRecord[]; pending_count?: number; pending_admin_review_count?: number }>(token, "admin/withdrawals", { signal });
+}
+export async function getAdminConfig(token: string, signal?: AbortSignal) {
+  return adminRequest<AdminConfig & { ok: true }>(token, "admin/config", { signal });
+}
+export async function saveAdminConfig(token: string, config: AdminConfig) {
+  return adminRequest<AdminConfig & { ok: true; audit_sync_pending?: boolean }>(token, "admin/config", { method: "POST", body: config });
+}
+export async function adminManualCredit(token: string, input: { uid: string; coin: string; amount: string; reference?: string; note?: string; idempotency_key: string }) {
+  return adminRequest<{ ok: true; duplicate?: boolean; balance?: AccountBalance; audit_sync_pending?: boolean }>(token, "admin/deposit/confirm", { method: "POST", body: input });
+}
+export async function adminApproveWithdrawal(token: string, id: string) {
+  return adminRequest<{ ok: true; status: string; audit_sync_pending?: boolean }>(token, "admin/withdraw/approve", { method: "POST", body: { id } });
+}
+export async function adminRejectWithdrawal(token: string, id: string, reason: string) {
+  return adminRequest<{ ok: true; status: string; audit_sync_pending?: boolean }>(token, "admin/withdraw/reject", { method: "POST", body: { id, reason } });
+}
+export async function adminMarkWithdrawalPaid(token: string, input: { id: string; reference: string; note?: string }) {
+  return adminRequest<{ ok: true; status: string; duplicate: boolean; payout_reference: string; paid_at: string | null }>(token, "admin/withdraw/mark-paid", { method: "POST", body: input });
+}
+export async function getAdminKyc(token: string, signal?: AbortSignal) {
+  return adminRequest<{ ok: true; kycs: AdminKycRecord[] }>(token, "admin/kyc", { signal });
+}
+export async function adminApproveKyc(token: string, uid: string, reason = "") {
+  return adminRequest<{ ok: true }>(token, "admin/kyc/approve", { method: "POST", body: { uid, reason } });
+}
+export async function adminRejectKyc(token: string, uid: string, reason: string) {
+  return adminRequest<{ ok: true }>(token, "admin/kyc/reject", { method: "POST", body: { uid, reason } });
+}
+export async function getAdminAuditLogs(token: string, limit = 50, signal?: AbortSignal) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  return adminRequest<{ ok: true; logs: AdminAuditRecord[]; next_before?: string | null; source?: string; completeness?: string }>(token, `admin/audit-logs?${query.toString()}`, { signal });
+}
+export async function getAdminOrders(token: string, signal?: AbortSignal) {
+  return adminRequest<{ ok: true; orders: OrderRecord[]; source?: string }>(token, "admin/orders", { signal });
+}
+export async function getAdminSupportMessages(token: string, signal?: AbortSignal) {
+  return adminRequest<{ ok: true; messages: SupportMessage[] }>(token, "admin/support/messages", { signal });
+}
+export async function adminReplySupport(token: string, uid: string, content: string) {
+  return adminRequest<{ ok: true }>(token, "admin/support/reply", { method: "POST", body: { uid, content } });
 }
