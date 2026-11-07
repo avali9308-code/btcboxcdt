@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -108,6 +108,10 @@ export function AdminPage() {
   });
   const [kyc, setKyc] = useState<AdminKycRecord[]>([]);
   const [audit, setAudit] = useState<AdminAuditRecord[]>([]);
+  const [auditNextBefore, setAuditNextBefore] = useState<string | null>(null);
+  const [auditPageLoading, setAuditPageLoading] = useState(false);
+  const auditPageRequestRef = useRef(0);
+  const tabLoadRequestRef = useRef(0);
   const [auditSource, setAuditSource] = useState("unknown");
   const [auditCompleteness, setAuditCompleteness] = useState("unknown");
   const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
@@ -210,15 +214,31 @@ export function AdminPage() {
   }, [allowedTabs, tab]);
 
   const loadTab = useCallback(async () => {
+    const requestId = ++tabLoadRequestRef.current;
     if (!token || !session) return;
+    const auditRequestId = ++auditPageRequestRef.current;
+    setAuditPageLoading(false);
     setLoading(true);
     setError("");
     try {
-      if (tab === "overview") setStats(await getAdminStats(token));
-      if (tab === "users") setUsers((await getAdminUsers(token, search)).users);
-      if (tab === "deposits") setConfig(await getAdminConfig(token));
+      if (tab === "overview") {
+        const snapshot = await getAdminStats(token);
+        if (requestId !== tabLoadRequestRef.current) return;
+        setStats(snapshot);
+      }
+      if (tab === "users") {
+        const snapshot = await getAdminUsers(token, search);
+        if (requestId !== tabLoadRequestRef.current) return;
+        setUsers(snapshot.users);
+      }
+      if (tab === "deposits") {
+        const snapshot = await getAdminConfig(token);
+        if (requestId !== tabLoadRequestRef.current) return;
+        setConfig(snapshot);
+      }
       if (tab === "markets") {
         const result = await getAdminSpotMarkets(token);
+        if (requestId !== tabLoadRequestRef.current) return;
         setSpotMarkets(result.markets || []);
         const pendingKey = "btcbox.admin.spot-market.v1." + session.user_id;
         try {
@@ -239,31 +259,45 @@ export function AdminPage() {
       }
       if (tab === "withdrawals") {
         setWithdrawals([]);
-        setWithdrawals((await getAdminWithdrawals(token)).withdrawals || []);
+        const snapshot = await getAdminWithdrawals(token);
+        if (requestId !== tabLoadRequestRef.current) return;
+        setWithdrawals(snapshot.withdrawals || []);
       }
       if (tab === "kyc") {
         setKyc([]);
-        setKyc((await getAdminKyc(token)).kycs || []);
+        const snapshot = await getAdminKyc(token);
+        if (requestId !== tabLoadRequestRef.current) return;
+        setKyc(snapshot.kycs || []);
       }
       if (tab === "audit") {
         // Never leave a previously loaded audit snapshot visible while a new
         // read is pending or after that read fails.
         setAudit([]);
+        setAuditNextBefore(null);
         setAuditSource("unknown");
         setAuditCompleteness("unknown");
         const snapshot = await getAdminAuditLogs(token);
-        setAudit(snapshot.logs || []);
-        setAuditSource(snapshot.source || "unknown");
-        setAuditCompleteness(snapshot.completeness || "unknown");
+        if (requestId === tabLoadRequestRef.current && auditRequestId === auditPageRequestRef.current) {
+          setAudit(snapshot.logs || []);
+          setAuditNextBefore(snapshot.source === "postgres_financial_audit_log" ? snapshot.next_before || null : null);
+          setAuditSource(snapshot.source || "unknown");
+          setAuditCompleteness(snapshot.completeness || "unknown");
+        }
       }
       if (tab === "orders") {
         const snapshot = await getAdminOrders(token);
+        if (requestId !== tabLoadRequestRef.current) return;
         setOrders((snapshot.orders || []) as unknown as Array<Record<string, unknown>>);
         setOrdersSource(snapshot.source || "unknown");
       }
-      if (tab === "support") setSupport(((await getAdminSupportMessages(token)).messages || []) as unknown as Array<Record<string, unknown>>);
+      if (tab === "support") {
+        const snapshot = await getAdminSupportMessages(token);
+        if (requestId !== tabLoadRequestRef.current) return;
+        setSupport((snapshot.messages || []) as unknown as Array<Record<string, unknown>>);
+      }
       if (tab === "seconds") {
         const result = await getAdminSecondsPolicy(token);
+        if (requestId !== tabLoadRequestRef.current) return;
         setSecondsPolicy(result.policy); setSecondsSymbols(result.policy.symbols); setSecondsDurations(result.policy.durations_sec);
         setSecondsMinStake(String(result.policy.min_stake)); setSecondsMaxStake(String(result.policy.max_stake));
         setSecondsPayoutPercent((result.policy.payout_bps / 100).toString());
@@ -271,26 +305,34 @@ export function AdminPage() {
         setSecondsMaxOpenPositions(result.policy.max_open_positions_per_user === null ? "" : String(result.policy.max_open_positions_per_user));
         try {
           const queue = await getAdminSecondsOpenPositions(token);
+          if (requestId !== tabLoadRequestRef.current) return;
           setSecondsOpenPositions(queue.positions);
           setSecondsOpenSummary(queue);
           setSecondsQueueError("");
         } catch (queueError) {
+          if (requestId !== tabLoadRequestRef.current) return;
           setSecondsQueueError(queueError instanceof Error ? queueError.message : "Open Seconds positions are temporarily unavailable.");
         }
       }
       if (tab === "admins" && session.is_super_admin) {
         const [membershipResult, userResult] = await Promise.all([getAdminMemberships(token), getAdminUsers(token, adminSearch)]);
+        if (requestId !== tabLoadRequestRef.current) return;
         setAdminMemberships(membershipResult.admins || []);
         setAdminCandidates(userResult.users || []);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not load administrator data.");
+      if (requestId === tabLoadRequestRef.current) {
+        setError(reason instanceof Error ? reason.message : "Could not load administrator data.");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === tabLoadRequestRef.current) setLoading(false);
     }
   }, [token, session, tab, search, adminSearch]);
 
-  useEffect(() => { void loadTab(); }, [loadTab]);
+  useEffect(() => {
+    void loadTab();
+    return () => { tabLoadRequestRef.current += 1; };
+  }, [loadTab]);
 
   useEffect(() => {
     if (!session?.user_id || !selectedUser?.uid) return;
@@ -324,19 +366,25 @@ export function AdminPage() {
   }, [session?.user_id, selectedUser?.uid]);
 
 
+  const userDetailRequestRef = useRef(0);
   const selectUser = async (uid: string) => {
     if (!token) return;
+    const requestId = ++userDetailRequestRef.current;
     setBusy(true); setError(""); setNotice("");
     // A failed user-detail read must never leave another user's balances or
     // manual-credit controls on screen as if they belonged to the new selection.
     setSelectedUser(null);
     try {
       const result = await getAdminUser(token, uid);
-      setSelectedUser(result.user);
+      if (requestId === userDetailRequestRef.current) setSelectedUser(result.user);
 
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "User account could not be loaded.");
-    } finally { setBusy(false); }
+      if (requestId === userDetailRequestRef.current) {
+        setError(reason instanceof Error ? reason.message : "User account could not be loaded.");
+      }
+    } finally {
+      if (requestId === userDetailRequestRef.current) setBusy(false);
+    }
   };
 
   const manualCredit = async (event: FormEvent<HTMLFormElement>, coin: string) => {
@@ -426,9 +474,39 @@ export function AdminPage() {
       setReviewQueueLoading(false);
     }
   };
+  const loadOlderAuditRecords = async () => {
+    if (!token || !auditNextBefore || auditPageLoading) return;
+    const cursor = auditNextBefore;
+    const requestId = ++auditPageRequestRef.current;
+    setAuditPageLoading(true);
+    setError("");
+    try {
+      const snapshot = await getAdminAuditLogs(token, 50, undefined, cursor);
+      if (requestId !== auditPageRequestRef.current || cursor !== auditNextBefore) return;
+      const nextSource = snapshot.source || "unknown";
+      const nextCompleteness = snapshot.completeness || "unknown";
+      if (nextSource !== auditSource || nextCompleteness !== auditCompleteness) {
+        setError("Audit source changed while loading older records. Refresh the Audit log before continuing.");
+        setAuditNextBefore(null);
+        return;
+      }
+      setAudit(current => {
+        const seen = new Set(current.map(item => item.id));
+        return [...current, ...(snapshot.logs || []).filter(item => !seen.has(item.id))];
+      });
+      setAuditNextBefore(snapshot.next_before || null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Older audit records could not be loaded.");
+    } finally {
+      if (requestId === auditPageRequestRef.current) setAuditPageLoading(false);
+    }
+  };
+
   const refreshKycQueue = async () => {
     if (!token) return;
     setReviewQueueLoading(true); setError(""); setNotice("");
+    // A failed refresh must not leave an older KYC decision queue actionable.
+    setKyc([]);
     try {
       const snapshot = await getAdminKyc(token);
       setKyc(snapshot.kycs || []);
@@ -743,10 +821,10 @@ export function AdminPage() {
             <Button type="submit" size="sm" disabled={busy || !!creditPendingInvalid[coin] || !hasPermission("deposits.review") || !hasPermission("deposits.read")}>{creditRequestIds[coin] ? "Retry same credit request" : "Confirm manual credit"}</Button>
           </form>)}</div>}
           {hasPermission("deposits.read") ? <section className="mt-6 space-y-3 border-t border-brand-border pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Deposit history</h3><Badge variant="outline">{selectedUser.deposit_history_source === "postgres_financial_ledger" ? "Source: PostgreSQL ledger" : selectedUser.deposit_history_source === "legacy_state_retention_limited" ? "Source: legacy state · limited" : "Source: unavailable"}</Badge></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-semibold">Deposit history · latest 20</h3><p className="mt-1 text-xs text-brand-text-muted">The account snapshot returns the 20 most recent deposits. Use the Audit log for the wider financial event trail.</p></div><Badge variant="outline">{selectedUser.deposit_history_source === "postgres_financial_ledger" ? "Source: PostgreSQL ledger" : selectedUser.deposit_history_source === "legacy_state_retention_limited" ? "Source: legacy state · limited" : "Source: unavailable"}</Badge></div>
             {!selectedUser.deposit_history ? <p className="text-sm text-brand-text-muted">Deposit history is not available in this response. Refresh the user record before reviewing a credit.</p> :
               selectedUser.deposit_history.length === 0 ? <p className="text-sm text-brand-text-muted">No deposit records found.</p> :
-              <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-xs"><thead><tr className="border-b border-brand-border text-brand-text-muted"><th className="p-2">Asset / network</th><th className="p-2">Amount</th><th className="p-2">Status</th><th className="p-2">Reference</th><th className="p-2">Time</th></tr></thead><tbody>{selectedUser.deposit_history.map((item,index)=><tr key={item.id || index} className="border-b border-brand-border/60"><td className="p-2">{item.coin} · {item.network || "—"}</td><td className="p-2 font-mono tabular-nums">{asText(item.amount)}</td><td className="p-2"><Badge variant={statusVariant(item.status)}>{item.status}</Badge></td><td className="max-w-[220px] truncate p-2 font-mono" title={item.reference || item.txid || ""}>{item.reference || item.txid || "—"}</td><td className="whitespace-nowrap p-2">{formatDate(item.time)}</td></tr>)}</tbody></table></div>}
+              <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead><tr className="border-b border-brand-border text-brand-text-muted"><th className="p-2">Asset / network</th><th className="p-2">Amount</th><th className="p-2">Status</th><th className="p-2">Record ID</th><th className="p-2">Reference</th><th className="p-2">Time</th></tr></thead><tbody>{selectedUser.deposit_history.map((item,index)=><tr key={item.id || index} className="border-b border-brand-border/60"><td className="p-2">{item.coin} · {item.network || "—"}</td><td className="p-2 font-mono tabular-nums">{asText(item.amount)}</td><td className="p-2"><Badge variant={statusVariant(item.status)}>{item.status}</Badge></td><td className="max-w-[180px] truncate p-2 font-mono" title={item.id || ""}>{item.id || "—"}</td><td className="max-w-[220px] truncate p-2 font-mono" title={item.reference || item.txid || ""}>{item.reference || item.txid || "—"}</td><td className="whitespace-nowrap p-2">{formatDate(item.time)}</td></tr>)}</tbody></table></div>}
           </section> : null}
         </>}
       </CardContent></Card>
@@ -761,9 +839,9 @@ export function AdminPage() {
 
     {!loading && tab === "withdrawals" ? <Card><CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>Withdrawal queue</CardTitle><CardDescription>Approve or reject requests. After staff actually transfer funds, mark paid with the TxID/reference.</CardDescription></div><Button size="sm" variant="outline" disabled={reviewQueueLoading || busy} onClick={()=>void refreshWithdrawalQueueManually()}>{reviewQueueLoading ? "Refreshing…" : "Refresh queue"}</Button></div></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead><tr className="border-b border-brand-border text-xs text-brand-text-muted"><th className="p-2">ID</th><th className="p-2">User</th><th className="p-2">Asset / amount</th><th className="p-2">Network / destination</th><th className="p-2">Status</th><th className="p-2">Action</th></tr></thead><tbody>{withdrawals.map(item=><tr key={item.id} className="border-b border-brand-border/60 align-top"><td className="p-2 font-mono text-xs">{item.id}</td><td className="p-2">{item.uid}</td><td className="p-2">{item.coin} {item.amount}<div className="text-xs text-brand-text-muted">Fee {item.fee}</div></td><td className="max-w-[260px] break-all p-2">{item.network}<div className="text-xs text-brand-text-muted">{item.address}</div></td><td className="p-2"><Badge variant={statusVariant(item.status)}>{item.status}</Badge></td><td className="min-w-[220px] space-y-2 p-2">{item.status==="pending"||item.status==="pending_admin_review"?<><Button size="sm" disabled={busy||!hasPermission("withdrawals.review")} onClick={()=>void approveWithdrawal(item.id)}>Approve</Button><Button size="sm" variant="outline" disabled={busy||!hasPermission("withdrawals.review")} onClick={()=>void rejectWithdrawal(item.id)}>Reject</Button></>:item.status==="approved"?<><input value={payoutReferences[item.id]||""} onChange={event=>setPayoutReferences(current=>({...current,[item.id]:event.target.value}))} placeholder="Required TxID / reference" maxLength={160} className="w-full rounded-lg border border-brand-border bg-brand-surface-2 px-2 py-2 text-xs text-brand-text"/><Button size="sm" disabled={busy||!payoutReferences[item.id]?.trim()||!hasPermission("withdrawals.review")} onClick={()=>void markPaid(item.id)}>Mark paid</Button></>:<span className="text-xs text-brand-text-muted">{item.payout_reference||"—"}</span>}</td></tr>)}</tbody></table></div></CardContent></Card> : null}
 
-    {!loading && tab === "kyc" ? <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>KYC review</CardTitle><Button size="sm" variant="outline" disabled={reviewQueueLoading || busy} onClick={()=>void refreshKycQueue()}>{reviewQueueLoading ? "Refreshing…" : "Refresh queue"}</Button></div></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead><tr className="border-b border-brand-border text-xs text-brand-text-muted"><th className="p-2">User</th><th className="p-2">Name</th><th className="p-2">Document</th><th className="p-2">Status</th><th className="p-2">Submitted</th><th className="p-2">Action</th></tr></thead><tbody>{kyc.map(item=><tr key={item.uid} className="border-b border-brand-border/60"><td className="p-2">{item.uid}<div className="text-xs text-brand-text-muted">{item.email}</div></td><td className="p-2">{item.name}</td><td className="p-2">{item.id_type}<div className="mt-1 text-xs">{item.document_url?<a href={item.document_url} target="_blank" rel="noreferrer" className="text-brand-accent underline underline-offset-2">Open secure image</a>:<span className="text-brand-text-muted">{item.document_preview_error||"Document image missing"}</span>}</div></td><td className="p-2">{item.status}</td><td className="p-2">{formatDate(item.submitted_at)}</td><td className="space-x-2 p-2"><Button size="sm" disabled={busy||!hasPermission("kyc.review")||!item.document_uploaded||!item.document_url} onClick={()=>void reviewKyc(item.uid,true)}>Approve</Button><Button size="sm" variant="outline" disabled={busy||!hasPermission("kyc.review")} onClick={()=>void reviewKyc(item.uid,false)}>Reject</Button>{!item.document_uploaded||!item.document_url?<p className="mt-1 text-xs text-amber-300">{item.document_uploaded?"Document preview unavailable; refresh the queue before approval.":"Identity document upload is required before approval."}</p>:null}</td></tr>)}</tbody></table></div></CardContent></Card> : null}
+    {!loading && tab === "kyc" ? <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>KYC review</CardTitle><Button size="sm" variant="outline" disabled={reviewQueueLoading || busy} onClick={()=>void refreshKycQueue()}>{reviewQueueLoading ? "Refreshing…" : "Refresh queue"}</Button></div></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead><tr className="border-b border-brand-border text-xs text-brand-text-muted"><th className="p-2">User</th><th className="p-2">Name</th><th className="p-2">Document</th><th className="p-2">Status</th><th className="p-2">Submitted</th><th className="p-2">Action</th></tr></thead><tbody>{kyc.map(item=><tr key={item.uid} className="border-b border-brand-border/60"><td className="p-2">{item.uid}<div className="text-xs text-brand-text-muted">{item.email}</div></td><td className="p-2">{item.name}</td><td className="p-2">{item.id_type}<div className="mt-1 text-xs">{item.document_url&&!item.document_preview_error?<a href={item.document_url} target="_blank" rel="noreferrer" className="text-brand-accent underline underline-offset-2">Open secure image</a>:<span className="text-brand-text-muted">{item.document_preview_error||"Document image missing"}</span>}</div></td><td className="p-2">{item.status}</td><td className="p-2">{formatDate(item.submitted_at)}</td><td className="space-x-2 p-2"><Button size="sm" disabled={busy||!hasPermission("kyc.review")||!item.document_uploaded||!item.document_url||!!item.document_preview_error} onClick={()=>void reviewKyc(item.uid,true)}>Approve</Button><Button size="sm" variant="outline" disabled={busy||!hasPermission("kyc.review")} onClick={()=>void reviewKyc(item.uid,false)}>Reject</Button>{!item.document_uploaded||!item.document_url||item.document_preview_error?<p className="mt-1 text-xs text-amber-300">{!item.document_uploaded?"Identity document upload is required before approval.":"Document preview unavailable; refresh the queue before approval."}</p>:null}</td></tr>)}</tbody></table></div></CardContent></Card> : null}
 
-    {!loading && tab === "audit" ? <Card><CardHeader><div className="flex flex-wrap items-start justify-between gap-2"><div><CardTitle>Financial audit log</CardTitle><CardDescription>{auditCompleteness === "postgres_canonical" ? "Canonical append-only PostgreSQL history. Financial operations and account history use the same database source." : auditCompleteness === "state_document_retention_limited" ? "Retention-limited state-file history. Do not treat this list as a complete financial audit record." : "Audit source is not confirmed. Do not treat this list as complete until the source is verified."}</CardDescription></div><Badge variant={auditCompleteness === "postgres_canonical" ? "default" : "destructive"}>{auditSource === "postgres_financial_audit_log" ? "PostgreSQL canonical" : auditSource === "btcbox_state" ? "State file · limited" : "Source unknown"}</Badge></div></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[800px] text-left text-sm"><thead><tr className="border-b border-brand-border text-xs text-brand-text-muted"><th className="p-2">Time</th><th className="p-2">Actor</th><th className="p-2">Action</th><th className="p-2">User</th><th className="p-2">Sync</th><th className="p-2">Detail</th></tr></thead><tbody>{audit.length ? audit.map((item,index)=><tr key={item.id||index} className="border-b border-brand-border/60"><td className="p-2">{formatDate(item.time)}</td><td className="p-2 font-mono text-xs">{item.by}</td><td className="p-2">{item.action}</td><td className="p-2">{item.uid}</td><td className="p-2">{item.postgres_sync_status}</td><td className="max-w-[280px] break-all p-2 text-xs">{item.detail}</td></tr>) : <tr><td colSpan={6} className="p-6 text-center text-sm text-brand-text-muted">No audit records are available in this snapshot.</td></tr>}</tbody></table></div></CardContent></Card> : null}
+    {!loading && tab === "audit" ? <Card><CardHeader><div className="flex flex-wrap items-start justify-between gap-2"><div><CardTitle>Financial audit log</CardTitle><CardDescription>{auditCompleteness === "postgres_canonical" ? "Canonical append-only PostgreSQL history. Financial operations and account history use the same database source." : auditCompleteness === "state_document_retention_limited" ? "Retention-limited state-file history. Do not treat this list as a complete financial audit record." : "Audit source is not confirmed. Do not treat this list as complete until the source is verified."} Operator ID is the recorded actor identifier, not a display name.</CardDescription></div><Badge variant={auditCompleteness === "postgres_canonical" ? "default" : "destructive"}>{auditSource === "postgres_financial_audit_log" ? "PostgreSQL canonical" : auditSource === "btcbox_state" ? "State file · limited" : "Source unknown"}</Badge></div></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[1000px] text-left text-sm"><thead><tr className="border-b border-brand-border text-xs text-brand-text-muted"><th className="p-2">Event ID</th><th className="p-2">Time</th><th className="p-2">Operator ID</th><th className="p-2">Action</th><th className="p-2">Affected user UID</th><th className="p-2">Sync</th><th className="p-2">Detail</th></tr></thead><tbody>{audit.length ? audit.map((item,index)=><tr key={item.id||index} className="border-b border-brand-border/60"><td className="p-2 font-mono text-xs">{item.id}</td><td className="p-2">{formatDate(item.time)}</td><td className="p-2 font-mono text-xs">{item.by}</td><td className="p-2">{item.action}</td><td className="p-2">{item.uid}</td><td className="p-2">{item.postgres_sync_status}</td><td className="max-w-[280px] break-all p-2 text-xs">{item.detail}</td></tr>) : <tr><td colSpan={7} className="p-6 text-center text-sm text-brand-text-muted">No audit records are available in this snapshot.</td></tr>}</tbody></table></div><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-brand-text-muted">Showing {audit.length} records from this source snapshot.</p>{auditNextBefore ? <Button type="button" variant="outline" disabled={auditPageLoading} onClick={()=>void loadOlderAuditRecords()}>{auditPageLoading ? "Loading older records..." : "Load older records"}</Button> : <span className="text-xs text-brand-text-muted">{auditSource === "postgres_financial_audit_log" ? "No older records in this snapshot." : "Legacy snapshot pagination is unavailable; this source is retention-limited."}</span>}</div></CardContent></Card> : null}
 
     {!loading && tab === "orders" ? <Card><CardHeader><div className="flex flex-wrap items-start justify-between gap-2"><div><CardTitle>Orders</CardTitle><CardDescription>{ordersSource === "postgres_financial_matching" ? "Customer order history and this administrator view use the canonical PostgreSQL matching orders." : ordersSource === "legacy_state" ? "Legacy state fallback is active because matching-engine mode was not requested." : "Order data source is not confirmed."}</CardDescription></div><Badge variant={ordersSource === "postgres_financial_matching" ? "default" : "destructive"}>{ordersSource === "postgres_financial_matching" ? "Source: PostgreSQL matching" : ordersSource === "legacy_state" ? "Source: legacy state" : "Source: unknown"}</Badge></div></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead><tr className="border-b border-brand-border text-xs text-brand-text-muted"><th className="p-2">ID</th><th className="p-2">User</th><th className="p-2">Symbol</th><th className="p-2">Side</th><th className="p-2">Status</th><th className="p-2">Created</th></tr></thead><tbody>{orders.map((item,index)=><tr key={asText(item.id)||index} className="border-b border-brand-border/60"><td className="p-2 font-mono text-xs">{asText(item.id)}</td><td className="p-2">{asText(item.uid||item.user_id)}</td><td className="p-2">{asText(item.symbol)}</td><td className="p-2">{asText(item.side)}</td><td className="p-2">{asText(item.status)}</td><td className="p-2">{formatDate(item.created_at||item.time)}</td></tr>)}</tbody></table></div></CardContent></Card> : null}
 

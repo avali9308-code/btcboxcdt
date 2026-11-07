@@ -432,3 +432,129 @@ Registration and the signed-out preview/home page are now the first pages to com
 - REGRESSION: Playwright loads one user's ledger-backed balance and deposit history, then simulates a 503 for the next user's detail request; it asserts the previous deposit ID and balance row disappear and the read error is visible.
 - Scope: frontend selection state and E2E only. No deposit API, ledger, database, idempotency key, credit behavior, or production configuration changed.
 - Verification: exact-head CI pending; no merge, deployment, production DB write, or real financial operation performed.
+
+
+## Admin audit identity clarity — 2026-11-07
+
+- Cross-check found the audit table used generic “Actor” and “User” headers while the values are administrator identity and affected BTCBOX UID. This can obscure which UUID is the operator versus the customer affected by the event.
+- Updated the UI headers to “Operator ID” and “Affected user UID”; the stored `by` and `uid` values and API contract remain unchanged.
+- Extended the audit E2E to assert both identity column labels and the synthetic operator/affected-user cells.
+- CI previously exposed two E2E fixture/locator assumptions in the audit reload and user-detail isolation tests; those tests were made deterministic before adding the identity assertions. Latest exact-head CI is pending.
+- No backend, audit schema, permissions, financial operations, production database, merge or deployment action performed by 2号 AI.
+
+
+## Admin queue race and evidence-refresh isolation — 2026-11-07 (2号 AI)
+
+- Repository check: PR #59 was merged by the repository owner on 2026-11-07 into `fix/post-merge-db-bootstrap-seconds-20261106`; the collaboration branch continues at its own HEAD. No deployment or production database action was performed by this batch.
+- FOUND: Admin user-detail reads could complete out of order. A slow response for an earlier user selection could overwrite a newer user's detail panel, even after the old panel was cleared before each request.
+- FIXED: sequence the user-detail requests with a component ref; only the latest selection may update user data, surface its error, or release the busy state.
+- REGRESSION: Playwright delays the first user-detail response, loads the second user first, then releases the first response and verifies the second user's balance remains selected.
+- FOUND: manual KYC queue refresh retained the previously loaded review rows when the new read failed, leaving stale evidence rows and approval controls available after a refresh error.
+- FIXED: clear the KYC queue before manual refresh. If the request fails, no stale KYC evidence or approval action remains visible; the read error is shown.
+- REGRESSION: KYC E2E now loads an incomplete evidence row, simulates a 503 on manual refresh, and verifies the stale user row and Approve button disappear. No financial/admin mutation is sent.
+- Scope: frontend state isolation and Playwright only. No KYC decision rules, financial APIs, ledger, database schema, authentication, or production settings changed.
+- Commits: `c806372` (latest-user response guard), `bda8639` (out-of-order response test), `6b5810f` (KYC fail-closed refresh), `ef50db2` (KYC refresh regression).
+- Verification: exact-head CI queued/running at handoff; do not mark the batch fully verified until both frontend and backend workflows finish.
+
+
+## Admin rapid-selection test assertion correction — 2026-11-07 (2号 AI)
+
+- CI run `42347244241`: lint/build passed; 52 Playwright cases passed; desktop and mobile variants of the rapid-selection test failed on the same invalid assertion.
+- The old test incorrectly expected the first user's email to disappear from the whole page. That email correctly remains in the Users directory after selection changes; the meaningful stale-state assertion is that the first user's balance (`111.00`) does not replace the latest user's balance (`222.00`).
+- Corrected the test to keep the directory row visible and assert the stale balance is absent. Commit: `dab5f6dee6ea6f1196f0afe172f5d95cc4d3170c`.
+- Awaiting exact-head CI. No production or backend financial operation.
+
+
+## Admin KYC preview and deposit-history traceability — 2026-11-07 (2号 AI)
+
+- KYC edge case: if `document_preview_error` was non-empty alongside `document_uploaded=true` and a `document_url`, the Admin UI still rendered the link and enabled Approve. Updated it to suppress the link and disable approval on any preview error; regression covers both missing upload and failed secure preview.
+- Deposit reconciliation: per-user deposit history now shows the optional source record ID separately from the TxID/reference, improving traceability without changing backend semantics. E2E asserts the record ID is visible.
+- Commits: `11a13c5`, `feaf362`, `0a9cfb1`, `0ef84b5`.
+- Scope: frontend rendering/tests only; no backend financial contract, ledger, DB, or production setting changed. Exact-head CI pending.
+
+
+## Admin audit pagination and deposit-history scope — 2026-11-07 (2号 AI)
+
+- Added canonical PostgreSQL audit cursor pagination (“Load older records”), deduplication, and source/completeness consistency guard. API already supported `before`/`next_before`; UI now consumes it.
+- Legacy state audit IDs use `AL...`, but backend currently validates all `before` cursors as positive PostgreSQL bigints before the legacy branch. The UI therefore intentionally hides pagination for legacy state and labels that source as retention-limited; backend fix belongs to Core owner if legacy pagination is required.
+- Confirmed from `0011_financial_read_api_earn_v1.sql` that account snapshot returns only the latest 20 deposits. Admin now labels the section “Deposit history · latest 20” and points staff to audit log for broader financial event trail.
+- Added E2E coverage for canonical pagination, unsupported legacy cursor suppression, and latest-20 disclosure.
+- Commits: `0bf6425`, `662d676`, `fbc04a0`, `3986341`, `f51f17a`. Frontend-only changes; no production/financial operations. Exact-head CI pending.
+
+
+- Audit pagination follow-up: guarded cursor-page requests against tab changes/re-entry. A delayed older page is ignored after a fresh audit snapshot is loaded. Regression test covers the out-of-order page response.
+- Commits: `28c3df8`, `4fa93a5`. Exact-head CI pending.
+
+
+- Added the audit event ID to the Admin audit table for direct reconciliation with the canonical audit record. Clarified that Operator ID is the recorded actor identifier, not a display name. E2E covers the visible ID. Commits: `cb8a45d`, `95de3cc`.
+
+## 2号 AI — public market provenance batch — 2026-11-07
+
+- Branch: `work/ai2-integration-batch-20261107`, based on the current `work/btcbox-unified-20261104` collaboration branch. No merge or deployment.
+- SOURCE OBSERVED: the public dashboard polls `GET /api/market` every 15 seconds and the market API maps both server snapshot time (`ts`) and provider timestamp (`providerTs`) into `MarketTicker`. The existing public table showed only server snapshot time, which could be mistaken for the upstream market-event/response time.
+- FIXED: public market table now displays the newest available provider timestamp separately from the server snapshot timestamp, including sanitized provider source and elapsed seconds. If provider timestamp is absent, it explicitly says unavailable; it does not substitute server time.
+- REGRESSION: appended Playwright coverage with distinct server/provider timestamps and asserts both labels are present. Age assertion is clock-boundary tolerant.
+- Commits: `6ed1954458e8cc0e8d5478c10cd03897a97efcba` (UI); `86b24d2dec1490e6a98bafe9bfd380a66d200908` (E2E); `c00ecb75f114e96a105e36b53f6113a164210ba5` (stable age assertion).
+- TEST STATUS: exact-head CI not yet triggered/verified. No local build result is claimed. Browser screenshot/physical-device visual QA remains pending.
+- LIMITATION: displaying upstream timestamp improves provenance visibility but does not prove that production provider data is fresh or changing. Live provider freshness and deployment behavior still require isolated Preview verification when release testing is authorized.
+- SAFETY: no auth, API contract, backend, database, funds, orders, production configuration, merge, or deployment changes.
+
+## 2号 AI — Admin tab response race batch — 2026-11-07
+
+- SOURCE OBSERVED: Admin `loadTab` requests for users, withdrawals, KYC, audit, orders, support, markets, deposits, seconds policy and administrator lists could resolve after a newer tab/search request. Existing audit pagination and user-detail selection had local guards, but the shared tab loader did not guard every read response.
+- FIXED: introduced a monotonically increasing tab-load request ID. Only the latest tab/search load may update its corresponding snapshot, surface its load error, or clear the shared loading state. Applied guards after awaited responses across the tab loader; retained the separate audit pagination guard and the existing manual refresh behavior.
+- REGRESSION: Playwright delays the first withdrawals GET, switches to KYC, re-enters withdrawals and receives a newer queue, then releases the older response; asserts the stale withdrawal ID cannot replace the latest queue.
+- Commits: `fc09aa75e86c59db717041b107adb9bfd44c9c3f` (Admin UI); `6e206e429a8508386c3e908cac8a3b8814ff6e5d` (E2E).
+- TEST STATUS: exact-head CI pending. No local build or screenshot QA claimed.
+- Scope: Admin frontend request lifecycle and synthetic Playwright fixtures only. No backend finance API, permissions, ledger, database, authentication or production setting changed; no real financial operations.
+
+## 2号 AI — deployment test isolation follow-up — 2026-11-07
+
+- Vercel source-observed latest production deployment: `dpl_2cAQrbFQbTouccNyccnYZfY7P89e`, commit `361be5c395fef85d11b52b67884122dab0d8e7c6`, state ERROR. Frontend Vite build completed successfully; backend `npm test` exited 1 (350/356 passed, 6 failed).
+- Retrieved the failing log segment: `backend/tests/api-routing.test.js` loads `api-adapter.js` / `api-core.js` while the inherited Vercel `ADMIN_PASS` fails the startup-strength check, raising `ADMIN_PASS_TOO_WEAK`. This is a test-process environment isolation issue; it is not evidence that the public frontend build failed.
+- FIXED in this branch: set a strong, explicitly test-only `ADMIN_PASS` inside `backend/tests/api-routing.test.js` before requiring the adapter. This is confined to that test worker and does not alter Vercel settings, runtime credentials, or the production password-strength policy.
+- Also fixed the first frontend CI run's Playwright regex over-escaping for the provider-age assertion. The initial lint/build passed; route E2E failed only on that assertion matcher. Commit: `92f7f48c78e16a5fdecb387fcd98f0839dfddb7b`.
+- Admin tab-load cleanup now invalidates outstanding requests as soon as the effect is cleaned up. Commit: `e5351418e694592702a0c612b6467148dd0066e2`.
+- Test isolation commit: `4091008d2b4212a69f61db9c03a7376f1ad762fd`.
+- TEST STATUS: fresh frontend/backend CI for the final branch head is pending. Do not infer that the other five Vercel test failures have the same root cause until the backend CI result identifies them.
+- Release pause remains in force. No Vercel environment setting, deployment, production database, authentication provider, real order or financial record was changed.
+
+- CI wiring finding: `.github/workflows/backend-ci.yml` had a push trigger for the unified collaboration branch but omitted that branch from its `pull_request.branches` allowlist. A backend test change in a draft PR targeting the unified branch therefore would not receive the required backend CI. Added the unified branch to the PR trigger list (commit `e66111e480327c70f69ee9b2be7b51909dc6653a`). Confirm the backend workflow starts on the updated PR head before treating test isolation as verified.
+
+- Backend CI after test-secret isolation: unified build passed; backend tests reached 410/411. The remaining failure was a stale source-contract regex in `backend/tests/kyc-flow.test.js`: it expected the old KYC approval-disabled expression and omitted the newly added `!!item.document_preview_error` guard. The Admin implementation correctly disables approval when secure preview reports an error. Updated the assertion to include that guard (commit `ddd6f921bf97249ea23c177b8fd5b469cbbaca73`). Exact-head backend CI rerun pending.
+
+- Backend CI rerun `42356561473`: SUCCESS — unified build, 411/411 backend tests, fail-closed preflight, and output/entrypoint verification all passed.
+- Frontend CI run `42356454539`: SUCCESS with 62 passed and 2 flaky (both passed on retry). The new Admin tab race test's exact request-count assertion was too strict under repeated initial loads; relaxed to assert at least two reads. An existing Admin stale-queue test also assumed exactly one initial GET; updated its fixture to tolerate the repeated initial read and fail the later re-entry refresh as intended. Commit: `94ba7a94aa0539ac643648fae52e4a1a4ec6d430`. Fresh exact-head frontend CI pending.
+
+- IMPORTANT RUNTIME HANDOFF TO 1号/Core owner: the production Vercel environment currently has a weak `ADMIN_PASS` (observed in the deployment test log; do not read or expose its value). `backend/api-core.js` throws at module startup when this value is weak, and the catch-all adapter imports that module. The test-only override above isolates the test process only; it does not repair the Vercel runtime. Before any release, the authorized environment owner must set a strong production admin password meeting the deployment preflight policy, or Core owner must redesign the guard so invalid admin credentials fail closed for admin authentication without crashing the shared API module. Do not weaken the password policy or change the production secret from this 2号 batch.
+
+- Frontend CI run `42356699699`: SUCCESS — lint/build and all desktop/mobile tests passed, but two existing Admin queue tests were flaky on first attempt and passed on retry. Logs showed count-based fixtures racing repeated initial GETs. Converted both to action-driven one-shot failure flags and retained the delayed-response race test; commits `a0fab6b` and `7662bba`. Fresh exact-head CI pending; require zero flaky cases before marking the batch fully accepted.
+
+- Final backend CI rerun `42356891197`: SUCCESS — unified site build, 411/411 backend tests, fail-closed deployment preflight and preserved output/entrypoint checks passed.
+- Final frontend CI rerun `42356891195`: install, lint, build and Chromium installation passed; desktop/mobile Playwright route suite was still running at the latest status check. Do not mark frontend suite complete until the job concludes. The prior run `42356699699` succeeded with 62 passed but reported two flaky tests; action-driven fixture corrections are included in the latest rerun.
+- PR #61 remains draft/open and mergeable against the unified collaboration branch; no merge or deployment.
+
+- FINAL VERIFICATION — frontend CI run `42356891195`: SUCCESS. npm install, lint, build, Chromium install and **64/64 desktop/mobile Playwright tests passed**, with no flaky retries reported. This run includes the upstream-provider timestamp assertion, the Admin tab response-race regression, and the action-driven queue failure fixtures.
+- FINAL VERIFICATION — backend CI run `42356891197`: SUCCESS. Unified build passed, **411/411 backend tests passed**, fail-closed deployment preflight passed, and preserved output/entrypoint checks passed.
+- The source/test batch is CI-green on branch `work/ai2-integration-batch-20261107`. PR #61 remains OPEN / DRAFT / NOT MERGED. No production deployment, production environment edit, database write, financial operation, or real order was performed.
+- STILL BLOCKED FOR RELEASE: production Vercel `ADMIN_PASS` remains weak as observed in the latest failed production build logs. Test isolation does not fix runtime. Manual desktop/mobile visual review and live upstream freshness on an authorized Preview remain pending.
+
+
+## 2号 AI — registration and public preview responsive regression batch — 2026-11-07
+
+- Source review confirmed `/register` starts with Google/Ethereum/Solana identity verification; `/account-setup` is where the user creates BTCBOX username/password. No email registration or email OTP was introduced. `/login` continues to expose username/password plus Google and wallet sign-in.
+- Public `/home`, `/markets`, and `/trade/:symbol` routes remain available without an account; private account/financial routes remain guarded.
+- Added Playwright breakpoint regression coverage for registration at 320/390/768/1440 px and public preview at 320/375/768/1024/1440 px. Assertions cover core identity choices, desktop registration hero, public market content and document-level horizontal overflow.
+- Commit: `4362d2589ae1c81c4ba4a5be585aa4b526a97c37`.
+- Fresh frontend CI for this commit is pending. Previous exact-head Actions runs passed 411/411 backend tests and 64/64 frontend tests.
+- GitHub commit status shows the Vercel check failing because the free plan reached its daily deployment limit (`api-deployments-free-per-day`). This is not a Playwright failure. No deployment retry or alternate deployment was attempted.
+- Manual desktop/mobile screenshot review and live upstream freshness remain unverified; automated viewport assertions are not visual acceptance.
+- Frontend E2E/docs only. No auth/backend/financial API, ledger, database, production environment, real account, real order, merge or deployment change.
+
+
+- CI follow-up: first responsive-suite run `42357749939` passed install, lint, build, Chromium setup and the registration breakpoint test. The preview breakpoint test failed on a locator selecting the hidden duplicate mobile/desktop market row in the DOM; no app overflow or missing market content was reported. Replaced it with a visible-paragraph locator (`p:visible` + `BTC/USDT`). Fix commit: `ad7073ed1639be40f79bfd777d28fac9b1ee170f`. Fresh exact-head frontend CI required; do not mark the responsive batch accepted until it passes.
+
+
+- FINAL RESPONSIVE CI — frontend run `42357960746` completed SUCCESS on the responsive-test fix: npm install, TypeScript lint, production build, Chromium setup, and **68/68 desktop/mobile Playwright tests passed**. The new registration and public-preview breakpoint tests passed on both projects. The earlier 66-pass/2-fail run was the test-selector defect described above; corrected and verified with no retries reported in the final log.
+- FINAL BACKEND CI — run `42357960745` completed SUCCESS: unified build, backend test suite, fail-closed preflight, and output/entrypoint checks all passed.
+- The Vercel status remains separate and blocked by the free-plan daily deployment cap. No deploy was attempted. Manual screenshot review and live provider freshness remain pending; do not claim production visual/live-feed acceptance.

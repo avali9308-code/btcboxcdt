@@ -436,6 +436,7 @@ async function installAdminE2EIdentity(page: import("@playwright/test").Page) {
 test("Admin withdrawal refresh failure stays a read-only error and cannot imply a financial action", async ({ page }) => {
   await installAdminE2EIdentity(page);
   let queueReads = 0;
+  let failNextQueueRead = false;
   const adminMutations: string[] = [];
   page.on("request", request => {
     const url = new URL(request.url());
@@ -445,21 +446,22 @@ test("Admin withdrawal refresh failure stays a read-only error and cannot imply 
   });
   await page.route("**/api/admin/withdrawals", async route => {
     queueReads += 1;
-    if (queueReads === 1) {
+    if (failNextQueueRead) {
+      failNextQueueRead = false;
       await route.fulfill({
-        status: 200,
+        status: 503,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, withdrawals: [{
-          id: "E2E-WITHDRAWAL-001", uid: "e2e-user-001", coin: "USDT", amount: "25.00",
-          fee: "1.00", network: "TRC20", address: "T-E2E-DESTINATION", status: "approved",
-        }] }),
+        body: JSON.stringify({ ok: false, code: "QUEUE_UNAVAILABLE", msg: "Withdrawal review queue could not be refreshed." }),
       });
       return;
     }
     await route.fulfill({
-      status: 503,
+      status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: false, code: "QUEUE_UNAVAILABLE", msg: "Withdrawal review queue could not be refreshed." }),
+      body: JSON.stringify({ ok: true, withdrawals: [{
+        id: "E2E-WITHDRAWAL-001", uid: "e2e-user-001", coin: "USDT", amount: "25.00",
+        fee: "1.00", network: "TRC20", address: "T-E2E-DESTINATION", status: "approved",
+      }] }),
     });
   });
 
@@ -468,6 +470,7 @@ test("Admin withdrawal refresh failure stays a read-only error and cannot imply 
   await expect(page.getByText("E2E-WITHDRAWAL-001")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mark paid" })).toBeDisabled();
 
+  failNextQueueRead = true;
   await page.getByRole("button", { name: "Refresh queue" }).click();
   await expect(page.getByRole("alert")).toContainText("Withdrawal review queue could not be refreshed.");
   await expect(page.getByRole("alert")).not.toContainText("confirmed");
@@ -487,25 +490,47 @@ test("Admin KYC approval remains disabled without an uploaded document and secur
   await page.route("**/api/admin/withdrawals", route => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, withdrawals: [] }),
   }));
-  await page.route("**/api/admin/kyc", route => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ ok: true, kycs: [{
-      uid: "e2e-user-kyc-001", email: "kyc-user@example.invalid", name: "QA KYC User",
-      id_type: "passport", status: "pending", submitted_at: "2026-11-06T10:00:00.000Z",
-      document_uploaded: false, document_url: undefined, document_preview_error: "Document image missing",
-    }] }),
-  }));
+  let kycReads = 0;
+  await page.route("**/api/admin/kyc", async route => {
+    kycReads += 1;
+    if (kycReads > 1) {
+      await route.fulfill({
+        status: 503, contentType: "application/json",
+        body: JSON.stringify({ ok: false, code: "KYC_UNAVAILABLE", msg: "KYC review queue could not be refreshed." }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({ ok: true, kycs: [{
+        uid: "e2e-user-kyc-001", email: "kyc-user@example.invalid", name: "QA KYC User",
+        id_type: "passport", status: "pending", submitted_at: "2026-11-06T10:00:00.000Z",
+        document_uploaded: false, document_url: undefined, document_preview_error: "Document image missing",
+      }, {
+        uid: "e2e-user-kyc-002", email: "preview-failed@example.invalid", name: "Preview Failed User",
+        id_type: "national_id", status: "pending", submitted_at: "2026-11-06T11:00:00.000Z",
+        document_uploaded: true, document_url: "https://storage.example.invalid/signed/kyc-document",
+        document_preview_error: "Secure document preview could not be generated",
+      }] }),
+    });
+  });
 
   await page.goto("/admin");
   await page.getByRole("button", { name: "KYC", exact: true }).click();
   await expect(page.getByRole("heading", { name: "KYC review" })).toBeVisible();
   await expect(page.getByText("QA KYC User")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Approve" }).nth(0)).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve" }).nth(1)).toBeDisabled();
   await expect(page.getByText("Identity document upload is required before approval.")).toBeVisible();
+  await expect(page.getByText("Secure document preview could not be generated")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open secure image" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Refresh queue" }).click();
-  await expect(page.getByRole("status")).toContainText("KYC review queue refreshed.");
+  await expect(page.getByRole("alert")).toContainText("KYC review queue could not be refreshed.");
+  await expect(page.getByText("QA KYC User")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  expect(kycReads).toBeGreaterThanOrEqual(2);
   expect(adminMutations).toEqual([]);
 });
 
@@ -562,12 +587,167 @@ test("Admin payout retry restores the exact TxID after an ambiguous response and
   expect(withdrawalReads).toBeGreaterThanOrEqual(2);
 });
 
+test("Admin ignores an older audit page response after leaving and reopening the tab", async ({ page }) => {
+  await installAdminE2EIdentity(page);
+  let auditReads = 0;
+  let releaseOlder: (() => void) | null = null;
+  await page.route("**/api/admin/audit-logs?**", async route => {
+    auditReads += 1;
+    const before = new URL(route.request().url()).searchParams.get("before");
+    if (before === "9001") {
+      await new Promise<void>(resolve => { releaseOlder = resolve; });
+      await route.fulfill({
+        status: 200, contentType: "application/json",
+        body: JSON.stringify({
+          ok: true, source: "postgres_financial_audit_log", completeness: "postgres_canonical",
+          logs: [{
+            id: "E2E-AUDIT-STALE-OLDER", time: "2026-11-05T10:00:00.000Z",
+            by: "e2e-admin-001", action: "manual_deposit_confirmed",
+            uid: "e2e-user-stale", detail: "Stale older page response", postgres_sync_status: "synced",
+          }],
+          next_before: null,
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        ok: true, source: "postgres_financial_audit_log", completeness: "postgres_canonical",
+        logs: [{
+          id: auditReads === 1 ? "E2E-AUDIT-INITIAL" : "E2E-AUDIT-REOPENED",
+          time: "2026-11-07T10:00:00.000Z", by: "e2e-admin-001",
+          action: "manual_deposit_confirmed", uid: "e2e-user-new",
+          detail: auditReads === 1 ? "Initial audit page" : "Reopened audit page",
+          postgres_sync_status: "synced",
+        }],
+        next_before: auditReads === 1 ? "9001" : "8001",
+      }),
+    });
+  });
+  await page.route("**/api/admin/kyc", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, kycs: [] }),
+  }));
+  await page.route("**/api/admin/withdrawals", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, withdrawals: [] }),
+  }));
+  await page.route("**/api/admin/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, user_id: "e2e-admin-001", status: "active", is_super_admin: false,
+      permissions: ["withdrawals.read", "kyc.read", "financial_audit.read"],
+    }),
+  }));
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Audit log", exact: true }).click();
+  await expect(page.getByText("Initial audit page")).toBeVisible();
+  await page.getByRole("button", { name: "Load older records" }).click();
+  await expect.poll(() => releaseOlder !== null).toBe(true);
+  await page.getByRole("button", { name: "KYC", exact: true }).click();
+  await page.getByRole("button", { name: "Audit log", exact: true }).click();
+  await expect(page.getByText("Reopened audit page")).toBeVisible();
+  releaseOlder?.();
+  await expect(page.getByText("Stale older page response")).toHaveCount(0);
+  await expect(page.getByText("Reopened audit page")).toBeVisible();
+  expect(auditReads).toBe(3);
+});
+
+test("Admin legacy audit snapshot does not offer an unsupported cursor", async ({ page }) => {
+  await installAdminE2EIdentity(page);
+  await page.route("**/api/admin/audit-logs?**", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, source: "btcbox_state", completeness: "state_document_retention_limited",
+      logs: [{
+        id: "AL1730950000abcdef", time: "2026-11-07T10:00:00.000Z",
+        by: "e2e-admin-001", action: "manual_deposit_confirmed",
+        uid: "e2e-user-legacy", detail: "Legacy audit fixture", postgres_sync_status: "local_only",
+      }],
+      next_before: "AL1730950000abcdef",
+    }),
+  }));
+  await page.route("**/api/admin/kyc", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, kycs: [] }),
+  }));
+  await page.route("**/api/admin/withdrawals", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, withdrawals: [] }),
+  }));
+  await page.route("**/api/admin/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, user_id: "e2e-admin-001", status: "active", is_super_admin: false,
+      permissions: ["withdrawals.read", "kyc.read", "financial_audit.read"],
+    }),
+  }));
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Audit log", exact: true }).click();
+  await expect(page.getByText("Legacy audit fixture")).toBeVisible();
+  await expect(page.getByText("Legacy snapshot pagination is unavailable; this source is retention-limited.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load older records" })).toHaveCount(0);
+});
+
+test("Admin audit log loads older canonical pages without mixing sources", async ({ page }) => {
+  await installAdminE2EIdentity(page);
+  let auditReads = 0;
+  const requestedUrls: string[] = [];
+  await page.route("**/api/admin/audit-logs?**", async route => {
+    auditReads += 1;
+    requestedUrls.push(route.request().url());
+    const olderPage = new URL(route.request().url()).searchParams.has("before");
+    await route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        ok: true, source: "postgres_financial_audit_log", completeness: "postgres_canonical",
+        logs: olderPage ? [{
+          id: "E2E-AUDIT-OLDER", time: "2026-11-06T10:00:00.000Z",
+          by: "e2e-admin-001", action: "manual_deposit_confirmed",
+          uid: "e2e-user-older", detail: "Older audit fixture", postgres_sync_status: "synced",
+        }] : [{
+          id: "E2E-AUDIT-NEWER", time: "2026-11-07T10:00:00.000Z",
+          by: "e2e-admin-001", action: "manual_deposit_confirmed",
+          uid: "e2e-user-newer", detail: "Newer audit fixture", postgres_sync_status: "synced",
+        }],
+        next_before: olderPage ? null : "9001",
+      }),
+    });
+  });
+  await page.route("**/api/admin/kyc", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, kycs: [] }),
+  }));
+  await page.route("**/api/admin/withdrawals", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, withdrawals: [] }),
+  }));
+  await page.route("**/api/admin/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, user_id: "e2e-admin-001", status: "active", is_super_admin: false,
+      permissions: ["withdrawals.read", "kyc.read", "financial_audit.read"],
+    }),
+  }));
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Audit log", exact: true }).click();
+  await expect(page.getByText("Newer audit fixture")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "E2E-AUDIT-NEWER" })).toBeVisible();
+  await expect(page.getByText("PostgreSQL canonical")).toBeVisible();
+  await page.getByRole("button", { name: "Load older records" }).click();
+  await expect(page.getByText("Older audit fixture")).toBeVisible();
+  await expect(page.getByText("Newer audit fixture")).toBeVisible();
+  await expect(page.getByText("Showing 2 records from this source snapshot.")).toBeVisible();
+  await expect(page.getByText("No older records in this snapshot.")).toBeVisible();
+  expect(auditReads).toBe(2);
+  expect(requestedUrls[1]).toContain("before=9001");
+});
+
 test("Admin audit reload failure clears stale records and resets source confidence", async ({ page }) => {
   await installAdminE2EIdentity(page);
   let auditReads = 0;
+  let failNextAuditRead = false;
   await page.route("**/api/admin/audit-logs?**", async route => {
     auditReads += 1;
-    if (auditReads === 1) {
+    if (!failNextAuditRead) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -606,15 +786,21 @@ test("Admin audit reload failure clears stale records and resets source confiden
   await page.goto("/admin");
   await page.getByRole("button", { name: "Audit log", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Financial audit log" })).toBeVisible();
-  await expect(page.getByText("E2E-STALE-AUDIT")).toBeVisible();
+  await expect(page.getByText("E2E audit fixture")).toBeVisible();
   await expect(page.getByText("PostgreSQL canonical")).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Event ID" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Operator ID" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Affected user UID" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "e2e-admin-001" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "e2e-user-001" })).toBeVisible();
+  failNextAuditRead = true;
 
   await page.getByRole("button", { name: "KYC", exact: true }).click();
   await expect(page.getByRole("heading", { name: "KYC review" })).toBeVisible();
   await page.getByRole("button", { name: "Audit log", exact: true }).click();
 
   await expect(page.getByRole("alert")).toContainText("Audit log is temporarily unavailable.");
-  await expect(page.getByText("E2E-STALE-AUDIT")).toHaveCount(0);
+  await expect(page.getByText("E2E audit fixture")).toHaveCount(0);
   await expect(page.getByText("Source unknown")).toBeVisible();
   expect(auditReads).toBeGreaterThanOrEqual(2);
 });
@@ -622,23 +808,25 @@ test("Admin audit reload failure clears stale records and resets source confiden
 test("Admin queue reload failure never leaves stale withdrawal actions visible", async ({ page }) => {
   await installAdminE2EIdentity(page);
   let queueReads = 0;
+  let failNextQueueRead = false;
   await page.route("**/api/admin/withdrawals", async route => {
     queueReads += 1;
-    if (queueReads === 1) {
+    if (failNextQueueRead) {
+      failNextQueueRead = false;
       await route.fulfill({
-        status: 200,
+        status: 503,
         contentType: "application/json",
-        body: JSON.stringify({ ok: true, withdrawals: [{
-          id: "E2E-STALE-WITHDRAWAL", uid: "e2e-user-002", coin: "USDT", amount: "40.00",
-          fee: "1.00", network: "TRC20", address: "T-E2E-STALE", status: "pending",
-        }] }),
+        body: JSON.stringify({ ok: false, code: "QUEUE_UNAVAILABLE", msg: "Withdrawal review queue could not be refreshed." }),
       });
       return;
     }
     await route.fulfill({
-      status: 503,
+      status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: false, code: "QUEUE_UNAVAILABLE", msg: "Withdrawal review queue could not be refreshed." }),
+      body: JSON.stringify({ ok: true, withdrawals: [{
+        id: "E2E-STALE-WITHDRAWAL", uid: "e2e-user-002", coin: "USDT", amount: "40.00",
+        fee: "1.00", network: "TRC20", address: "T-E2E-STALE", status: "pending",
+      }] }),
     });
   });
   await page.route("**/api/admin/kyc", route => route.fulfill({
@@ -653,6 +841,7 @@ test("Admin queue reload failure never leaves stale withdrawal actions visible",
 
   await page.getByRole("button", { name: "KYC", exact: true }).click();
   await expect(page.getByRole("heading", { name: "KYC review" })).toBeVisible();
+  failNextQueueRead = true;
   await page.getByRole("button", { name: "Withdrawals", exact: true }).click();
 
   await expect(page.getByRole("alert")).toContainText("Withdrawal review queue could not be refreshed.");
@@ -778,14 +967,202 @@ test("Admin user-detail failure clears the previously selected user's financial 
   await page.goto("/admin");
   await page.getByRole("button", { name: "Users & manual credit", exact: true }).click();
   await page.getByRole("button", { name: "Open", exact: true }).first().click();
-  await expect(page.getByText("first@example.invalid")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "first@example.invalid" })).toBeVisible();
   await expect(page.getByText("E2E-DEPOSIT-001")).toBeVisible();
-  await expect(page.getByText("e2e-user-001", { exact: true })).toBeVisible();
+  await expect(page.getByText("E2E-TX-FIRST")).toBeVisible();
+  await expect(page.getByText("The account snapshot returns the 20 most recent deposits. Use the Audit log for the wider financial event trail.")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "e2e-user-001" })).toBeVisible();
 
   await page.getByRole("button", { name: "Open", exact: true }).nth(1).click();
   await expect(page.getByRole("alert")).toContainText("User account could not be loaded.");
-  await expect(page.getByText("E2E-DEPOSIT-001")).toHaveCount(0);
+  await expect(page.getByText("E2E-TX-FIRST")).toHaveCount(0);
   await expect(page.getByText("Available: 250.00")).toHaveCount(0);
   await expect(page.getByText("Select a user to load their current balances.")).toBeVisible();
   expect(detailReads).toBe(2);
+});
+
+
+test("Admin rapid user selection ignores an older detail response", async ({ page }) => {
+  await installAdminE2EIdentity(page);
+  await page.route("**/api/admin/session", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, user_id: "e2e-admin-001", status: "active", is_super_admin: false,
+      permissions: ["users.read", "deposits.read", "deposits.review"],
+    }),
+  }));
+  await page.route("**/api/admin/users**", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ ok: true, users: [
+      { uid: "e2e-user-slow", email: "slow@example.invalid", frozen: false },
+      { uid: "e2e-user-fast", email: "fast@example.invalid", frozen: false },
+    ] }),
+  }));
+  let detailReads = 0;
+  let releaseSlow: (() => void) | null = null;
+  await page.route("**/api/admin/user?**", async route => {
+    detailReads += 1;
+    if (detailReads === 1) {
+      await new Promise<void>(resolve => { releaseSlow = resolve; });
+      await route.fulfill({
+        status: 200, contentType: "application/json",
+        body: JSON.stringify({ ok: true, user: {
+          uid: "e2e-user-slow", email: "slow@example.invalid", frozen: false,
+          financial_balance_source: "postgres_financial_ledger",
+          balances: { USDT: { free: "111.00", frozen: "0", usdt: "111.00", valuation_available: true } },
+        } }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({ ok: true, user: {
+        uid: "e2e-user-fast", email: "fast@example.invalid", frozen: false,
+        financial_balance_source: "postgres_financial_ledger",
+        balances: { USDT: { free: "222.00", frozen: "0", usdt: "222.00", valuation_available: true } },
+      } }),
+    });
+  });
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Users & manual credit", exact: true }).click();
+  await page.getByRole("button", { name: "Open", exact: true }).first().click();
+  await expect.poll(() => detailReads).toBe(1);
+  await page.getByRole("button", { name: "Open", exact: true }).nth(1).click();
+  await expect(page.getByRole("cell", { name: "fast@example.invalid" })).toBeVisible();
+  await expect(page.getByText("Available: 222.00")).toBeVisible();
+
+  if (!releaseSlow) throw new Error("The first user detail request did not start.");
+  releaseSlow();
+  await expect(page.getByRole("cell", { name: "fast@example.invalid" })).toBeVisible();
+  await expect(page.getByText("Available: 222.00")).toBeVisible();
+  // The earlier user remains in the directory; only the selected detail panel must stay on the newer user.
+  await expect(page.getByRole("cell", { name: "slow@example.invalid" })).toBeVisible();
+  await expect(page.getByText("Available: 111.00")).toHaveCount(0);
+  expect(detailReads).toBe(2);
+});
+
+test("public preview distinguishes server snapshot time from upstream provider time", async ({ page }) => {
+  const now = Math.floor(Date.now() / 1000);
+  await page.route("**/api/market", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      ok: true,
+      markets: [{ sym: "BTC", price: 65000, chg: 1.2, high: 66000, low: 64000, vol: "1000000", source: "coinbase" }],
+      data: { BTC: { ts: now, providerTs: now - 90, source: "coinbase" } },
+    }),
+  }));
+
+  await page.goto("/home");
+
+  await expect(page.getByText(/Server snapshot ·/)).toBeVisible();
+  await expect(page.getByText(/Provider snapshot · coinbase · .* · [0-9]+s ago/)).toBeVisible();
+});
+
+test("Admin ignores a withdrawal queue response from a tab opened earlier", async ({ page }) => {
+  await installAdminE2EIdentity(page);
+  let withdrawalReads = 0;
+  let releaseOlder: (() => void) | null = null;
+  await page.route("**/api/admin/withdrawals", async route => {
+    withdrawalReads += 1;
+    if (withdrawalReads === 1) {
+      await new Promise<void>(resolve => { releaseOlder = resolve; });
+      await route.fulfill({
+        status: 200, contentType: "application/json",
+        body: JSON.stringify({ ok: true, withdrawals: [{
+          id: "E2E-WITHDRAWAL-STALE", uid: "e2e-old-user", coin: "USDT",
+          amount: "10.00", fee: "1.00", network: "TRC20",
+          address: "T-OLD", status: "approved",
+        }] }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({ ok: true, withdrawals: [{
+        id: "E2E-WITHDRAWAL-CURRENT", uid: "e2e-current-user", coin: "USDT",
+        amount: "20.00", fee: "1.00", network: "TRC20",
+        address: "T-CURRENT", status: "approved",
+      }] }),
+    });
+  });
+  await page.route("**/api/admin/kyc", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ ok: true, kycs: [] }),
+  }));
+
+  await page.goto("/admin");
+  await expect.poll(() => releaseOlder !== null).toBe(true);
+  await page.getByRole("button", { name: "KYC", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "KYC review" })).toBeVisible();
+  await page.getByRole("button", { name: "Withdrawals", exact: true }).click();
+  await expect(page.getByText("E2E-WITHDRAWAL-CURRENT")).toBeVisible();
+  releaseOlder?.();
+  await expect(page.getByText("E2E-WITHDRAWAL-STALE")).toHaveCount(0);
+  await expect(page.getByText("E2E-WITHDRAWAL-CURRENT")).toBeVisible();
+  expect(withdrawalReads).toBeGreaterThanOrEqual(2);
+});
+
+
+test("registration layout adapts from mobile to desktop without losing the identity choices", async ({ page }) => {
+  for (const viewport of [
+    { width: 320, height: 780 },
+    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 1440, height: 1000 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/register");
+    await expect(page.getByRole("heading", { name: "Create your BTCBOX account" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Ethereum wallet" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Solana wallet" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+    await expect(page.getByLabel(/email/i)).toHaveCount(0);
+    await expect(page.getByLabel("Username")).toHaveCount(0);
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.content, `registration overflow at ${viewport.width}px`).toBeLessThanOrEqual(dimensions.viewport);
+    if (viewport.width >= 1024) {
+      await expect(page.getByRole("heading", { name: "A clearer way to enter the digital asset market." })).toBeVisible();
+    }
+  }
+});
+
+test("public market preview remains responsive across mobile, tablet and desktop widths", async ({ page }) => {
+  await page.route("**/api/market", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      ok: true,
+      markets: [{ sym: "BTC", price: 65000, chg: 1.2, high: 66000, low: 64000, vol: "1000000", source: "coinbase" }],
+      data: { BTC: { ts: Math.floor(Date.now() / 1000), providerTs: Math.floor(Date.now() / 1000), source: "coinbase" } },
+    }),
+  }));
+  await page.route("**/api/kline?**", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: true, source: "coinbase", klines: [{ time: Date.now(), open: 64900, high: 65100, low: 64800, close: 65000, volume: 12 }] }),
+  }));
+
+  for (const viewport of [
+    { width: 320, height: 780 },
+    { width: 375, height: 812 },
+    { width: 768, height: 900 },
+    { width: 1024, height: 900 },
+    { width: 1440, height: 1000 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/home");
+    await expect(page.getByRole("heading", { name: "Explore the market. Trade with confidence." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Market overview" })).toBeVisible();
+    await expect(page.locator("p:visible").filter({ hasText: "BTC/USDT" }).first()).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.content, `public preview overflow at ${viewport.width}px`).toBeLessThanOrEqual(dimensions.viewport);
+  }
 });
