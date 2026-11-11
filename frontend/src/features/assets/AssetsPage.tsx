@@ -5,8 +5,20 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { ApiError, getAccount, type AccountBalance, type AccountSnapshot } from "../../lib/api";
-import { formatDecimalAmount, localeTags, useI18n } from "../../lib/i18n";
-import { TokenIcon } from "../../components/ui/TokenIcon";
+import { useI18n } from "../../lib/i18n";
+
+function amount(value: number | string | undefined) {
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    const match = normalized.match(/^(-?)(\d+)(?:\.(\d+))?$/);
+    if (!match) return "—";
+    const [, sign, integer, fraction] = match;
+    const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return sign + grouped + (fraction ? "." + fraction : "");
+  }
+  if (value === undefined || value === null) return "—";
+  return Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 8 }) : "—";
+}
 
 export function AssetsPage() {
   const { t, language } = useI18n();
@@ -16,23 +28,19 @@ export function AssetsPage() {
   const [error, setError] = useState("");
   const [signedOut, setSignedOut] = useState(false);
   const requestIdRef = useRef(0);
-  const controllerRef = useRef<AbortController | null>(null);
 
-  async function load() {
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
+  async function load(signal?: AbortSignal) {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setAccount(null);
     setError("");
     setSignedOut(false);
     try {
-      const snapshot = await getAccount(controller.signal);
-      if (!controller.signal.aborted && requestId === requestIdRef.current) setAccount(snapshot);
+      const snapshot = await getAccount(signal);
+      if (!signal?.aborted && requestId === requestIdRef.current) setAccount(snapshot);
     } catch (reason) {
       if (reason instanceof Error && reason.name === "AbortError") return;
-      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
+      if (signal?.aborted || requestId !== requestIdRef.current) return;
       setAccount(null);
       if (reason instanceof ApiError && reason.code === "AUTH_REQUIRED") {
         setSignedOut(true);
@@ -41,10 +49,7 @@ export function AssetsPage() {
         setError(reason instanceof Error ? reason.message : t("Account data is temporarily unavailable."));
       }
     } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-        controllerRef.current = null;
-      }
+      if (!signal?.aborted && requestId === requestIdRef.current) setLoading(false);
     }
   }
 

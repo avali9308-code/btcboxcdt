@@ -6512,174 +6512,168 @@ Current branch HEAD at note creation: `51c302a96f069876e438321d3597501fcbc26b54`
 - Vercel's separate status remains blocked by the free-plan daily deployment cap. No deployment was attempted. Manual screenshot and live-provider checks remain pending.
 
 
-<!-- coderabbit-ai-generated:v1 -->
+## 2026-11-07 — 2号 AI production readiness follow-up (PR #64)
+
+- Branch: `work/2ai-production-readiness-20261107`; PR #64 targets `main`. Latest recorded code SHA before this note: `2415e39534368110e8708053901a14f2f3349758`.
+- FIXED: deployment preflight no longer requires obsolete `ADMIN_USER` / `ADMIN_PASS`; the sample environment documents Supabase Auth + database RBAC. Financial cutover flags remain explicitly fail-closed at `0`.
+- CI FINDING: first backend run failed one stale source assertion in `backend/tests/smoke.test.js` which required the removed legacy admin variables in `.env.example`. Updated the assertion to require the current RBAC documentation and reject reintroduction of those legacy variables.
+- CI FINDING: first frontend E2E run failed because `frontend/e2e/auth-routes.spec.ts` still expected `/support` to redirect to login. The route is intentionally public, but its account conversation is private.
+- FIXED: public `/support` now renders a public Help Center and sign-in entry for signed-out users. Support conversation GET/POST calls are made only after `useAuth().status === "authenticated"`; the submit handler also refuses anonymous sends. E2E now asserts the public route and that signed-out users do not touch private support APIs.
+- CI: backend workflow run `42377687895` completed success (unified build, backend tests, preflight and output checks). Frontend run `42377687910` had lint/build/Chromium setup pass; Playwright route tests were still running at this note. Do not mark frontend CI green until final job conclusion is success.
+- DB source audit: the canonical SQL inventory contains 25 ordered files (`0001`–`0032` with retired gaps explicitly documented). The bootstrap script is explicitly for a verified empty BTCBOX schema and is not an existing-data migration. Do not run it against the live project.
+- Hosted DB migration registry currently returns only timestamp versions `20261102133555` and `20261103062716`; do not equate these with the four-digit SQL source filenames. A read-only function catalog query found `public.review_withdrawal_atomic(text,text,boolean,text)` only among the 12 queried required RPC names; the other queried admin/RBAC, shared rate-limit, spot-market and Seconds functions were absent. Reconcile the full function/table inventory before preparing any live migration.
+- No production DDL/DML, migration, financial flag change, merge or Vercel deployment was performed. Owner approval and a backed-up, reviewed legacy-data migration plan are still required for production schema changes.
 
-<!-- coderabbit-ai-generated-section:v1:8fa62c1ee70e8663cb4fa29fd58e1301dffe367670a5954796fb70040545a30e -->
 
-## 2026-11-09 mobile handoff and focused fixes
+- Documentation correction in this follow-up: `backend/supabase/sql/MIGRATION-ORDER-AND-CUTOVER.md` previously claimed the hosted project database was empty and misstated the canonical bootstrap count as 24. Updated it to state that the connected hosted project contains pre-existing BTCBOX state/data, the empty-schema bootstrap is not applicable, and the canonical source inventory is 25 SQL files. No SQL was applied.
 
-- SOURCE OBSERVED: fetched main at `05d2ac87e77e157284ccc16148e20cf516c8757d`; the canonical build uses `frontend/` and the `backend/` Vercel build. The older coordination inventories and CI results describe other revisions. PR #64 (public support and readiness) is open and conflicting with main; PRs #73 and #78 contain ongoing locale work. Do not merge them wholesale or assume their CI covers main.
-- SOURCE OBSERVED: My account previously presented the signed-out panel while auth was still loading. The page now shows loading until session restoration resolves.
-- SOURCE OBSERVED: a timed-out market poll could retain quotes; the BTC summary also remained visible with stale snapshots and the market list used only the newest snapshot to decide freshness. This batch clears quotes on timeout, cancels an in-flight request on unmount, hides all quotes when any timestamped row is stale, and labels stale home data.
-- REPRODUCED: the mobile public support link reaches `/support`, but the guest page has only a sign-in link and the backend chat endpoint requires a user; guest communication is NOT IMPLEMENTED. Core/API owner must design a real guest channel and its persistence/abuse controls.
-- NOT VERIFIED: live Supabase auth and session persistence, OAuth provider, production market timestamps, real support, all requested viewports, or production deployment. Auth initialization still treats configuration failures as anonymous and has no bounded initialization timeout; this needs a separate auth-state repair. Main's locale checker reports seven previously unregistered static labels; the Japanese mobile account/market views also contain English. Coordinate with existing locale work.
-- Scope is customer frontend and tests only; no trade layout, financial operation, database, deployment, or merge changed. See this commit's test evidence and task report for exact results.
 
-<!-- /coderabbit-ai-generated:v1 -->
+## Admin review queue concurrency hardening (2026-11-08, 2号 AI)
+- Added monotonically increasing request IDs to both automatic/manual withdrawal queue refresh paths. Older responses and their finally handlers cannot overwrite a newer queue snapshot or clear its loading state.
+- Added KYC queue request sequencing shared by manual refresh and post-approval/post-rejection reloads. A pre-review read cannot restore an already-reviewed application after the newer post-review snapshot.
+- Added source-level regression coverage in `backend/tests/spot-trading-live-refresh.test.js` for out-of-order withdrawal and KYC queue refresh handling.
+- Commits: `9952eaaa79cf9e77be8e53c34d7b8e92a5383f5e`, `22efd4e4582d5a11b3a6c43181160798f8b4e13e`, `73a8d0e3910f8e23ad26392be2d4b13d709adef4`.
+- Exact latest head at documentation update: pending confirmation after this doc commit. GitHub Actions were still running on the preceding code head; no pass is claimed here.
+- No production database operation, merge, or deployment was performed. Vercel remains blocked by the account build-rate limit.
 
+## Admin review queue race and CI contract follow-up — 2026-11-08
 
-<!-- coderabbit-ai-generated:v1 -->
+- Exact-head CI on prior commit `72d7cdc989663fc4ca5b0a01eec5c6e9f5bbf479` exposed three stale source-contract assertions in `admin-api-contract.test.js`, `kyc-flow.test.js`, and `spot-trading-live-refresh.test.js`. The source implementation already used the shared post-review refresh helper; tests still expected the earlier inline queue-removal/error wording or scoped helper calls to the wrong block.
+- Updated those tests to assert the actual confirmed-action refresh contract and KYC queue request sequencing. Commits: `245d67064ff2a342a5d69cec370c47bc93ece209`, `3e0fc675fd5d5172653e9aa1d2a447f0cfb0a774`, `ea229327b9543ed8948fded6ccd02caeb2f8d5b2`.
+- Additional source review found a real race: the initial KYC/withdrawal tab load was guarded by the tab request ID but not by the queue request ID, so an older initial response could overwrite a newer manual/post-review refresh. Initial loads now increment the same queue request sequence and guard both success and failure paths. Commit: `0a17dc8de3d561ab468364f44b3b4736a214a1d8`.
+- Added a regression contract test for initial-load versus refresh races. Commit: `dbca1001d0dcc61a031c8387ebe34c06c64ddd30`.
+- Latest branch head at this update: `dbca1001d0dcc61a031c8387ebe34c06c64ddd30`. CI for this exact head has not yet returned results; do not treat previous failed CI as current validation.
+- No production database operations, merge, or deployment were performed. Vercel build-rate-limit remains a separate deployment-account limitation.
 
-<!-- coderabbit-ai-generated-section:v1:4166d4f341aeb7d38cc0648d131edf06b68bda405c0fb99fcaa8bd7a1fa09c64 -->
+## Support queue and reply reliability — 2026-11-08
 
-### Validation for this batch
+- Admin support initial loads now share a monotonically increasing queue request ID with manual refresh and post-reply reloads. Late responses from an earlier tab load cannot replace a newer support snapshot.
+- Added a fail-closed manual support queue refresh: old messages are cleared while loading and remain cleared if the read fails.
+- Support replies now use a per-customer in-flight lock to prevent duplicate submissions, retain the idempotency request ID after uncertain failures, and fail safely if secure browser UUID generation is unavailable.
+- After a confirmed reply, the UI clears the old queue and reloads it under a fresh request ID; if that reload fails, the UI reports that the reply was sent but requires a reload before another reply.
+- Added source-contract regression coverage for support queue request sequencing, per-customer reply locking, and secure request IDs.
+- Commits: `30e40a22f1855275c6ff429603568849a3203725`, `317437fed261bd9adab8324f59b51a2915e832b8`.
+- Deposit operations currently expose an audited manual-credit endpoint but no separate deposit-review queue read API in the frontend client contract. Do not invent a queue or present manual credits as verified deposits; keep the existing user-selected, reference-required manual-credit workflow until the Core/API owner supplies a read contract.
+- Latest support change CI is pending; do not claim it passed until checks for the exact latest head complete.
+- No production database operations, merge, or deployment were performed.
 
-- TEST PASSED: frontend lint and build; 8/8 focused account/support tests and 14/14 market tests across desktop/mobile Chromium with synthetic isolated responses.
-- FAILED: `npm run check:i18n` reports seven pre-existing static keys missing from the English dictionary. Local preview at 390px exposed additional Japanese/English mixing; locale work remains open.
-- Initial market test run exposed a missing stale badge on Home; added it and the full market suite passed on isolated rerun. One intervening run lost Playwright artifacts because two test commands shared their output directory; no concurrency used in final run.
-- Local Vite preview had no configured API; it does not verify production login, support delivery, or live market updates.
+- Follow-up CI found one existing support-reply contract test still expected the old literal refresh-failure message. Updated the assertion to match the new success-message-preserving fail-closed refresh behavior. Commit: `d3c682792348bfa25cc15d5e393f9b8532e3a9d9`.
 
-<!-- /coderabbit-ai-generated:v1 -->
 
+## Admin manual-credit selection race — 2026-11-08 (2号 AI)
+- Found that a confirmed manual credit always called `selectUser(targetUid)` after its asynchronous POST. If the operator selected another user while the credit request was in flight, the old completion could unexpectedly replace the current detail view.
+- Fixed by capturing the selected UID and detail-request generation at submission time; the post-credit refresh now runs only if that same user selection is still current. The credit remains bound to the original target UID and is never redirected to the newly selected account.
+- Added a source-contract regression test for the selection-generation guard.
+- Frontend/Admin UI and regression test only. No credit API, ledger, database, authentication, or production data changed.
+- Exact-head CI pending. No merge or deployment.
 
-<!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:0c7e19585645fa50d2a64f9beffdf1aa7637728d7ba9397c2e890f613e56542d -->
+## Admin delegated-user search race — 2026-11-08 (2号 AI)
+- Fixed Admin > delegated administrators candidate search so a slower earlier query cannot overwrite the results of a newer query.
+- Admin-tab initial candidate loading now shares a request-generation guard with manual searches; a late initial tab response cannot replace a newer manual search result.
+- The candidate list is cleared while a manual search is pending and only the latest request may publish results or errors.
+- Added a regression source-contract test. No admin membership, authentication, role, or database behavior was changed.
+- Exact-head CI pending; no merge or deployment.
 
-## 2026-11-09 next-phase evidence (main baseline)
 
-- Latest fetched main:05d2ac87e77e157284ccc16148e20cf516c8757d; accepted prior task work remains74a8dfe97f26b7b3b4ce1b63f08cf4da22de5de2. No new work branch,merge,push,deployment or production writes.
-- SECURITY TEST PASSED: main already includes2a3810da1aef2c0c7c58df0cfdb059a212eeb0d6 retiring ADMIN_PASS startup gating. Active admin authentication is Supabase Bearer plus server-side RBAC; no legacy password fallback. `mise exec node@22 -- node --test tests/admin-legacy-password-env.test.js tests/admin-auth.test.js tests/admin-rbac.test.js tests/admin-route-permissions.test.js` in backend passed27/27. No production credential read or changed. Historical weak-password startup warning is superseded for current source; deployed-version and production identity/configuration remain NOT VERIFIED.
-- HISTORICAL CI VERIFIED: GitHub run42357960746/job128360079462 log says68 passed(1.1m),SHA367e2779fcc5122cbe8e99e9445cf6c1d0f0fb2b. This is not current-main acceptance.
-- MAIN E2E EXECUTED: main frontend exported with git archive to /tmp/btcbox-main-next-phase,existing node_modules reused. Node22.23.4,Playwright1.65.0,Chromium1254. `mise exec node@22 -- npx playwright test --workers=2 --output=/tmp/btcbox-main-next-e2e` completed exit1:72 passed,27 failed,1 intentionally skipped. Browser available. Failures involve retired email controls,OAuth cancellation destination,Home hierarchy/stale status,and mobile/ambiguous locators; responsive matrix did not complete. No tests weakened or email flow restored.
-- CANDIDATES ANALYZED: PR64 f4a449bde40c3000c0a698363a058edd850e0b60 (158 unique/30 main commits missing,47 changed files,21 simulated conflicts): only select missing read-only diagnostics/planning for later review; support/0033 already present. PR73 47edfd6961a45b07b94158539bec398cccf80e95 (76/30,25 files,15 conflicts): do not duplicate seven-locale work already in main. PR78 c4c7f8559f7fafa9ac29ffd0c61c31bd13da463d (3/20,3 files,1 conflict): locale-formatting patch worth porting selectively; preserve newer polling/auth/visual work. merge-tree simulation only,no actual merge.
-- K-LINE PLAN: compact Markets header link to an anchor on existing BTC/USDT analysis; reuse chart and request/store logic. Do not imply arbitrary selected-pair support or change locked Trade structure. Cloud Preview inspected at390px; no horizontal overflow in no-data state,not live-market acceptance.
-- APPROVAL PACKET PREPARED: guest support needs a confirmed official channel or separately approved guest-ticket API/data design; KYC needs owner retention/deletion policy and approved isolated storage verification; withdrawals require staged migration/idempotency/ledger evidence and explicit production cutover approval. No approval is inferred from this report. No financial or database actions performed.
+## Admin Seconds queue refresh ordering — 2026-11-08 (2号 AI)
+- Added a shared request generation for the initial Seconds open-position snapshot and the manual Refresh queue action.
+- A manual refresh clears the prior snapshot while loading; only the newest request can publish rows, summary, errors, or loading completion. Leaving the Seconds tab invalidates pending queue reads.
+- Added a regression source-contract test. Read-only queue only; no settlement, positions, balances, or financial logic changed.
+- Exact-head CI pending; no merge or deployment.
 
 
-<!-- /coderabbit-ai-generated:v1 -->
-<!-- coderabbit-ai-generated:v1 -->
+## User asset balance precision display — 2026-11-08 (2号 AI)
+- Found the Assets page converted backend decimal-string balances to JavaScript Number before display. This can lose precision for large balances and small crypto fractions even though the API contract supports string values.
+- Updated string balance formatting to group the integer part without numeric conversion and preserve the exact fractional digits returned by the account service. Numeric values retain the existing locale formatter; invalid strings display an em dash rather than a fabricated zero.
+- Added a regression source-contract test. Presentation-only; no account API, valuation, balance, ledger, or financial calculation changed.
+- Exact-head CI pending; no merge or deployment.
 
-<!-- coderabbit-ai-generated-section:v1:66c48b4f63dfc293bf65f472f64d56aa59b6750f7fee52dc78d777b2586e995e -->
 
-## 2026-11-09 independent redesign and design correction
+## Public dashboard candle polling overlap — 2026-11-08 (2号 AI)
+- Found both historical BTC/USDT chart effects polled every 60 seconds without an in-flight guard. A slow provider response could overlap the next poll and allow older candle data to resolve after a newer request.
+- Added per-chart in-flight guards for liquidity and volume candle polling. Slow requests are not duplicated; failed non-abort reads clear the corresponding chart data, and effect cleanup still aborts the active request.
+- Added a regression source-contract test. Read-only public market display only; no quote source, market API, order flow, or trading logic changed.
+- Exact-head CI pending; no merge or deployment.
 
-- OWNER AUTHORIZATION: the latest assignment explicitly lifts the previous Trade layout lock and authorizes CodeRabbit to implement the integrated frontend on `feature/btcbox-complete-redesign`. The subsequent correction requires a coherent product design system, no promotional poster composition, Chinese administration, Japanese-default multilingual customer pages, and preservation of real business/API behavior. These instructions supersede earlier layout/ownership restrictions for this isolated assignment; they do not authorize a merge, deployment, database migration or production financial operation.
-- BASELINE: latest fetched stable main is `05d2ac87e77e157284ccc16148e20cf516c8757d`. The new branch was created from that commit, then accepted account-loading/market-freshness fixes and prior evidence were preserved via `5cfa4e1` and `defa121`. Older candidate branches were not merged. Work is isolated from other branches.
-- IMPLEMENTED: unified navy surfaces, blue actions, typography, borders, navigation and compact mobile layouts; official unmodified white logo; market-first home, favorites/sorting, market chart entry, inline responsive Trade chart/order-entry/depth with interval controls, exact decimal estimate, compact account/assets/order views and explicit session-restoration recovery. The selected Trade pair now reaches its actual USDT market. No fabricated market or financial fallback data is introduced.
-- LANGUAGE: customer default remains Japanese with English, Chinese, Spanish, Portuguese, Italian and German choices. Admin presentation is independently Chinese, without overwriting the customer's saved language. Server enums and API permission names remain unchanged. Unknown provider/server error payloads can retain their original language; dictionary key coverage is not a proof of complete linguistic quality.
-- ADMIN PRESERVATION: existing Supabase/RBAC gates, user lookup, manual credit, addresses/fees/announcement configuration, withdrawal review/manual payout references, KYC review, audit provenance/pagination, orders, support replies, Seconds policy/open positions, market configuration and administrator provisioning remain wired to their existing handlers. No permission or financial-validation handler was removed. The unified build now includes only the three whitelisted original brand images.
-- DEPLOYMENT BOUNDARY: `backend/vercel.json` disables Git deployment for this new branch. No main merge, production deployment, database or financial operation is part of this delivery. All visual fixtures and automated test identities are synthetic; the branch is not production-approved.
-- REMAINING: email-provider login/registration/recovery requested earlier is absent from the current Google/Web3 allowlist contract; it was not silently enabled for the visual correction. Real Supabase OAuth, KYC storage/RLS, funds/execution and guest message delivery are not certified by fixture tests. Brand download provenance does not prove the owner's commercial authorization. Final validation evidence is appended separately.
 
+## Assets decimal-string browser regression — 2026-11-08 (2号 AI)
+- Latest frontend CI build and lint passed, but the desktop and mobile Playwright asset-page checks failed because the fixture supplied the exact decimal string `125.50` while the browser test expected `125.5`.
+- The Assets page formatter intentionally preserves backend decimal-string precision, including trailing fractional zeroes. Updated the browser expectation to `125.50`, added a frozen-balance assertion for `10.00`, and retained the assertion that an incomplete valuation must not render a total.
+- This corrects stale test expectations; no application runtime behavior, API contract, balances, valuation, or financial logic changed.
+- Previous exact-head CI: Backend success; PostgreSQL schema success; Frontend failed only in this same asset assertion on desktop and mobile (74 other browser checks passed). New exact-head CI must complete before this batch is considered validated.
+- No merge, deployment, or production database operation.
 
-<!-- /coderabbit-ai-generated:v1 --><!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:a85d99d63f70e7ed03e6550077eb717659167e6387694d9f41bb0e2b32fa08d1 -->
+## Assets decimal-string formatter root-cause correction — 2026-11-08 (2号 AI)
+- Correction to the prior 18ca9de CI diagnosis: the updated browser assertion was not merely stale. The source formatter regex had doubled backslashes in regex literals (`\\\\d`, `\\\\B`), so decimal-string balances did not match and rendered as an em dash. The earlier source-contract test repeated the same escaping mistake and therefore passed while the UI was broken.
+- Corrected the regex literals to use actual digit/non-word-boundary escapes; corrected the source-contract test to assert the executable regex rather than the over-escaped text. This restores exact decimal-string rendering (including trailing zeroes) and integer grouping without Number conversion.
+- The existing desktop/mobile browser regression now checks available `125.50`, frozen `10.00`, and fractional BTC `0.002`, while confirming the incomplete total valuation remains hidden.
+- This is a display-only bug fix; no account API, balances, valuation, ledger, database, or trading behavior changed. Exact-head CI is required before marking validated.
+- No merge, deployment, or production database operation.
 
-### Redesign validation and delivery limits
+- Follow-up source inspection caught one remaining doubled escape before the decimal-point literal in the regex; corrected that to a single escaped dot as well. The existing source-contract assertion already checks the correctly escaped decimal-point pattern. The final regex now matches normal decimal strings end-to-end (for example `125.50`).
 
-- PASSED: frontend lint, TypeScript production build; locale checker939 keys per supported locale,0 missing/duplicate. Exact-decimal tests3/3. Backend suite493/493; latest packaging/admin-entry/CSP/auth subset66/66 after final build. Overlapping subsets are not additional distinct tests.
-- FULL E2E:99 passed,18 failed,1 intentionally skipped (118 cases),4.9min. The six new redesign/session scenarios passed on both desktop and mobile. Remaining nine failures per device concern retired email controls,Google label/registration layout expectations,and OAuth registration cancellation destination. Failures remain reported rather than suppressed. After final Chinese admin route/date/fallback refinement,focused admin E2E26/26 passed; no customer business behavior changed afterward. A duplicate dictionary property caught by final TypeScript build was removed; final build passes.
-- VISUAL:20 desktop/mobile screenshots from the task's shared Chromium, covering home,markets,login,registration,account,trade,assets,orders,admin access and admin overview. All are visibly marked synthetic UI fixtures; they are not live API,prices,funds,orders,provider or production acceptance evidence. Logo/overflow checks also ran at320,360,390,430,768,1440px. Native Safari/WebKit has not been exercised.
-- LIMITS: approximately1.263MB main bundle warning remains. Unknown server error payloads may retain upstream language. Email auth,guest support delivery and live integration requirements remain open as noted above. No production readiness or all-tests-green claim. CI results belong to the pushed branch SHA and must be read independently of old68-pass evidence.
+## Exact-head CI validation — 2026-11-08 (2号 AI)
 
+- Rechecked branch `work/2ai-production-readiness-20261107` at exact HEAD `e0c29c48c349e17f1bc4cea936b1d6e6aaf9ad9a`.
+- Frontend CI run `42396173023`: completed successfully (build and browser test job).
+- Backend CI run `42396173084`: completed successfully.
+- PostgreSQL schema CI run `42396173092`: completed successfully.
+- This supersedes the earlier “exact-head CI pending” notes above for the asset decimal-string formatter correction and the preceding Admin/dashboard batches. The browser regression now validates the corrected decimal-string formatter on desktop and mobile.
+- PR #64 remains open and unmerged. No production deployment, production database operation, or merge was performed.
 
-<!-- /coderabbit-ai-generated:v1 --><!-- coderabbit-ai-generated:v1 -->
 
-<!-- coderabbit-ai-generated-section:v1:64f0cacead09f4237db0094af023eb04991f0b565e30a311ed1069eab66a7f63 -->
+## Public market stale-snapshot fail-closed display — 2026-11-08 (2号 AI)
+- Found the public markets table could continue presenting a successful API response as a live feed even when the server snapshot timestamp was more than 90 seconds old. Provider timestamps are not used for this decision because Coinbase last-trade time and Bybit response time have different semantics.
+- Added a 90-second freshness check using only the server snapshot timestamp. When an available timestamp exceeds the threshold, the dashboard labels the feed as stale and the markets table hides quotes with a clear unavailable message until a fresh snapshot arrives. The table now displays the server snapshot age for transparency.
+- Removed an unreachable error-rendering branch that checked for non-empty markets after the same error had already forced that list to empty.
+- Added a Playwright regression that returns a valid-looking BTC quote with an expired server snapshot timestamp and asserts the stale badge/reason appear while the price and trading link are hidden.
+- Presentation-only fail-closed behavior; no market provider, quote source, API contract, order execution, or financial logic changed. CI pending for this exact commit. No merge or deployment.
 
-## 2026-11-09 V211 continued source trace and confirmed non-trading fixes
+- Follow-up CI on the stale-snapshot change exposed two older source-contract assertions that hard-coded the previous `error ? [] : markets` expression. Updated both tests to assert the new combined API-error/server-snapshot-expiry gate and the 90-second freshness threshold; no runtime code change in this follow-up. CI pending.
 
-- CURRENT OWNER DIRECTION: preserve the approved V211 professional terminal; identify its exact source before changing trading structure. This supersedes the earlier redesign layout freedom for subsequent work. No transaction layout/source deletion, push, merge, deployment, provider operation or production database write in this batch.
-- INSPECTION BASELINE: merged task HEAD `610031e181dddf3a9f03a42381e6db8203a229fa`; latest fetched main remains `8db5de501949751135c84abc28a60f9f30dcdc1a`, not integrated. Work remains isolated on `coderabbit/btcbox-mobile-audit/a99c5bf9`.
-- NEW EVIDENCE: restore notes identify upstream `avali9308-code/btcbox-v33` at `18a354a9e8e1d0365e240c7c44eda4a18d62ce07`. Its archived terminal, imported by `a915ec8d661d4bd2df26e7a67eab631305551954`, has exactly the current legacy CSS blob `8516acef37a5e70b072d786ce33083b6c3d25528`. Original ZIP CSS is also byte-identical. Historical coordination explicitly describes the approved mobile orderbook-left/form-right 38/62 layout and chart drawer above five-item navigation; it also says device acceptance was not run. These facts establish layout lineage, not the V211 version label.
-- REPLACEMENT CHAIN: initial React SpotTradingPage `824c9448d6324f879759b243fbf5c9c013c3b137`; React-only build switch `58cc29cfb3cd8e54c4a8c0461b0a4f49b9dc4fbe`; later mobile chart/depth drawers; current redesign `8e7267dc7ad54c446c4b80b2406b82da5bdf9c1c` uses inline chart/entry/depth. Current React cannot be certified as preserving the old professional layout. Legacy code remains intact.
-- REMAINING BASELINE GAP: no source/snapshot or reachable commit binds the name V211 to the archived terminal. The old handoff's source commit references return GitHub HTTP422 in the upstream repo. Minimal owner question is only whether the already recovered four-zone desktop / left-book-right-entry mobile terminal is the version they call V211; no repeated source-file request is needed.
-- FIXED: admin tabs preserve complete horizontal labels and scroll at 320/390/768px; Chinese admin session-expired feedback still denies access; account support/security descriptions translated across all supported locales and legacy Vietnamese. Existing API, permission and financial handlers remain unchanged.
-- VERIFIED: frontend lint/typecheck/build pass; locale checker941 keys with no missing/duplicate keys; focused admin/account browser E2E20/20; backend493/493. Six fresh shared-Preview screenshots cover desktop/mobile account,admin,expired-session states using visibly marked synthetic fixtures. Existing full CI at8e7267d remains99 pass/18 fail/1 skip, not superseded by this focused pass. No new CI triggered because no push.
-- ARTIFACTS: task Outputs `btcbox-v211/trace-evidence.md`, `btcbox-v211/source-history.json`, `btcbox-nontrade-fixes/` screenshots. Trading layout acceptance remains open pending version identity; language coverage is not a full linguistic/real-provider acceptance.
 
+## Admin spot-market decimal validation correction — 2026-11-08 (2号 AI)
 
-<!-- /coderabbit-ai-generated:v1 --><!-- coderabbit-ai-generated:v1 -->
+- Cross-checked the Admin Panel spot-market configuration form after the market freshness batch. Its decimal validator contained doubled backslashes in a JavaScript regex literal, so ordinary values such as `0.01`, `0.000001`, and `1.25` were interpreted as literal backslash sequences and rejected.
+- Corrected the regex to use executable digit and decimal-point escapes. Added a backend source-contract regression that checks the exact regex and representative accepted/rejected values.
+- Scope is limited to Admin UI input validation; no market configuration API, market listing, price tick rules on the server, order execution, or financial state was changed.
+- Exact-head CI is pending for this correction. PR #64 remains open and unmerged; no deployment or production database operation.
 
-<!-- coderabbit-ai-generated-section:v1:dfe06c4b848667926ac3570d3be5f7511426546952cb19d89e965003186dc329 -->
 
-## 2026-11-09 Owner-confirmed V211 layout implementation
+- Test-fixture follow-up: changed the expected regex source literal to a normal escaped JavaScript string so the Node test file itself parses cleanly while still comparing the exact one-backslash regex source. CI rerun required.
 
-- OWNER CONFIRMATION: mobile orderbook-left/order-entry-right with K-line drawer is now the confirmed V211 requirement. No additional version-name confirmation is required. This supersedes the prior pending-identity stop condition for implementing this structure; it does not establish that every historical source detail was accepted.
-- IMPLEMENTED on the isolated task branch: compact workspace uses38/62 left depth/right entry with full-width orders below; chart is mounted in a modal bottom drawer above60px navigation plus safe area. Desktop restores pair list/chart/book/entry four zones with legacy170px/adaptive/min240px20%/min280px24% proportions and500/560px chart height. Pair choices reuse the existing enabled-pair API response. Live quote/precision/idempotency/order/cancel handlers and backend remain preserved.
-- INTERACTION: existing Radix modal primitive supplies focus containment/Escape/outside close; explicit close restores entry focus. Chart initializes after portal node mount, cleans up on close, preserves form values across chart/timeframe changes, and handles viewport transitions. No market/financial fallback fixtures added to application code.
-- ACCEPTANCE SCOPE: new responsive browser assertions verify left/right geometry at320/390/768 and desktop1440, drawer canvas and safe navigation clearance, repeated close/open, focus return and unchanged edited exact amounts. Previous inline-chart expectations changed to the newly authorized drawer contract; first stale-expectation run had2 failures,follow-up24 passed before final sizing refinements. Final current-source results are in task validation record/Outputs.
-- OTHER PAGES: previous admin navigation,Chinese expired-session feedback and account translations retained; their browser cases are included in the affected regression run. Non-trading commit e9b988b remains separately reviewable. Historical18 CI failures remain independent outstanding issues. No push/merge/deploy/database or real funds operation authorized or performed.
 
+## Spot trading stale-snapshot protection — 2026-11-08 (2号 AI)
 
-<!-- /coderabbit-ai-generated:v1 --><!-- coderabbit-ai-generated:v1 -->
+- Extended the public-market freshness rule to the individual spot trading page. A successful API response could otherwise leave an old quote visible on the order-entry screen even though the public dashboard already hid expired snapshots.
+- The trading page now requires a timestamped server snapshot no older than 90 seconds before displaying the ticker as current or accepting a new order. A small freshness clock re-evaluates the age while the page remains open; existing idempotent pending-order retries remain available for reconciliation.
+- Added a Playwright regression with an expired server snapshot and enabled server order policy; it verifies the quote is hidden and new order entry is disabled.
+- No backend API, matching engine, financial logic, or account state changed. Exact-head CI pending. No merge, deployment, or production DB operation.
 
-<!-- coderabbit-ai-generated-section:v1:8b459f70add42507085e42c27f3ac0eb5336ac27b646fb6c7cfb8dce0e7233c5 -->
 
-## 2026-11-09 spot terminal visual refinement
+- CI feedback on the first spot-trading freshness commit found one existing source-contract test that still expected the pre-change ticker source expression. Updated the assertion to the freshness-gated display expression and added explicit checks for ticker and order-entry freshness gates.
+- Extended the same protection to timestamped order-book depth: stale or untimestamped depth levels are now hidden, with a clear unavailable state. The Playwright fixture now uses an expired depth snapshot and verifies stale bid/ask prices are not rendered.
+- Backend CI failure was limited to the outdated frontend-source assertion; PostgreSQL schema CI passed. The corrected exact-head run is pending.
 
-Owner requests production-quality visual hierarchy without changing API/function contracts or official logo/fonts. Compact terminal remains left-book/right-entry plus chart drawer; proportions now40/60 rather than38/62 under explicit proportion-optimization authorization. Desktop keeps four zones. Consolidated existing exchange CSS into one scoped ruleset,12px depth rows,46px inputs,44px buy/sell selection,48px order action,30px primary quote and secondary high/low grid. Compact cards/borders removed; policy message remains visible below submit and execution gates unchanged.
 
-Available balances now display only the existing validated account response,using exact string-aware locale formatting; signed out/failed reads show dash,not zero. Snapshots clear on refresh/pair change and while order/cancel busy,requiring refreshed reads after mutations. No new endpoint or business fallback. Submit/cancel handler bodies remain byte-identical to0ce8d9d. Radix trigger now belongs to the same Root as its portal for consistent outside-click/focus handling. No other page logo/font/global tokens changed. Nontrade admin/account regression cases retained.
+- Additional stale-price cleanup: when a ticker becomes stale or disappears, the form clears the price that was auto-filled from the old ticker. This prevents a stale quote from remaining visible inside the editable limit-price input even though the summary quote is hidden. A manually edited price is preserved when a ticker exists; new order submission remains blocked until a fresh timestamped quote returns.
+- Extended the Playwright regression to assert the stale auto-filled limit price is cleared.
 
-Acceptance includes320/360/375/390/393/414/430/768/1440 geometry/drawer checks and buy/sell/balance/input tests. Test fixtures only; no actual financial operation. Outputs contain full mobile/desktop scroll captures and390px view. Current exact-SHA results are recorded separately in task validation record. Prior18CI failures remain outside this visual patch. No push/merge/deployment/database action.
 
+## Asset response validation and Admin review double-submit guard — 2026-11-08 (2号 AI)
 
-<!-- /coderabbit-ai-generated:v1 --><!-- coderabbit-ai-generated:v1 -->
+- Authenticated account reads now validate every returned asset row: each asset must have explicit, non-negative `free` and `frozen` amounts in supported numeric form. Missing/malformed fields reject the account response instead of silently rendering an incomplete financial snapshot.
+- Asset formatting now renders absent values as `—`, never as a fabricated zero.
+- Admin withdrawal approval and KYC/withdrawal rejection now use synchronous per-record locks, preventing rapid repeated clicks from dispatching duplicate review requests before React state updates. Existing server idempotency and confirmed-result refresh behavior remain in place.
+- Added source-contract regression checks for malformed account balances and review action locks.
+- No balance, ledger, payout, KYC decision, or database data was changed. CI pending; PR #64 remains open and unmerged, with no production deployment.
 
-<!-- coderabbit-ai-generated-section:v1:45eb6df5249a6b937b27aa9dbc1f5e6d6539c29a3bbab8786725b5670fab65ad -->
 
-## 2026-11-09 terminal detail refinement
+## Mobile spot workstation drawer usability — 2026-11-08 (2号 AI)
 
-Preserved accepted compact40/60left-depth/right-entry and chart drawer,desktopfourzones. Depth column grid now1.35:1 with aligned headers,existing mono font,12px minimum and26px row height; emphasized latest API price. Subtle9%opacity cumulative backgrounds use only visible verified orderbook quantities,normalized within each side,not financial calculations or invented liquidity. Blank/stale depth renders no bars. Quote spacing reduced; total/available/input/action hierarchy refined; routine policy notice muted but retained. Open orders use divider rows with existing status/cancel handler/gates.
-
-Searched frontend/src and backend/assets: no renderedCodeRabbit/Synthetic fixture/scroll capture strings existed. Previous visible labels were capture annotations. New screenshot artifacts omit visible annotations and retain generation/test provenance in PNG metadata and report. No production code marker stripped, no API source fabrication. Submit/cancel handlers remain byte-identical to8a857d7;no backend/API/decimal/logo/nav changes. No push/merge/deploy/productiondata operations.
-
-Fresh affected browser suite28/28,including375/390/414depth sizing/row/cancel-nav clearance and existing320–1440geometry,input/staleness/nontradecases. Build/typecheck,lint,i18n pass;backend493/493anddecimal3/3reused unchanged.9actual sharedPreview screenshots include375/390/414 and desktopfullscroll;fixturecontext documented in report. NativeSafari/live provider execution and old18fullCI failures remain outstanding. Final SHA and reproducible evidence are in task Outputs/validation record.
-
-
-<!-- /coderabbit-ai-generated:v1 -->
-
-## 2026-11-07 — 2号 AI public market no-placeholder batch
-
-- Dedicated branch: `fix/public-market-no-placeholder-data-20261107`, based on `main` at `2a3810d`; integration target remains `work/btcbox-unified-20261104`.
-- Public Markets previously formatted zero-initialized pair entries as prices. Invalid/empty refreshes could also leave old values in memory and render them as current.
-- Fixed provider parsing to accept only positive prices from the current response, clear missing/failed quotes, update all visible quote/stat elements, and hide unsupported/empty rows on Home and Markets. Trade headers now show unavailable values rather than formatting zero. Removed public-facing simulation/backend-internal wording from unavailable states.
-- Added market-adapter and public UI regression tests. Exact-head CI, browser QA, and live-provider Preview verification are pending; do not mark accepted until CI passes. No production deployment, environment change, database write, or real financial operation.
-- Detailed handoff: `docs/PUBLIC-MARKET-NO-PLACEHOLDER-HANDOFF-2026-11-07.md`.
-
-
-## 2026-11-07 — 2号 AI Vite public UI copy and stale-market follow-up
-
-- Vercel project lookup for btcboxcdt reports framework `vite`; the same repository also contains the backend static app. The batch therefore covers both the backend market adapter/views and the Vite customer-facing dashboard/pages, rather than assuming the legacy HTML view is the only active UI.
-- Vite dashboard previously retained last confirmed quote rows after a market refresh error while labelling the table as live. It now clears market rows on refresh failure, and the table itself suppresses any quote rows whenever an error is present. Unavailable state is explicit and does not show stale snapshot/provider metadata or a misleading zero-pair count.
-- Removed customer-visible wording that described orders as “sample or simulated” and “never simulated in the browser”; replaced it with ordinary account/market copy.
-- Added Playwright regressions for a successful quote followed by a failed refresh and for empty market responses; added a source-contract test preventing simulation wording in customer pages.
-- PR #63 now includes these Vite changes as well as the backend view/adapter fixes. Exact-head frontend/backend CI and browser QA remain pending; no production deployment or financial/DB operation.
-
-
-## 2026-11-07 — 2号 AI final visible-copy cleanup
-
-- Removed the visible “Preview” status pill from the top bar and “Preview · API verification pending” banner from the sidebar.
-- Replaced the customer-facing “Integration pending / scaffolded / in this preview” section placeholder with a neutral “Unavailable” state.
-- Removed remaining customer-facing “sample/simulated orders” copy from both Orders page implementations.
-- Backend market depth cache is now cleared when the current order-book provider refresh fails, instead of continuing to display an old book.
-- Regression tests cover these visible-copy rules and stale depth clearing. Latest PR head is d80ce66; exact-head CI is queued/running. No merge or deployment has been performed.
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:1e31c5667b43cad150e5e4b553c3a2dfc61db5e79105dbdbf4eb05a144211ee8 -->
-
-## 2026-11-09 customer cleanup and local integration
-
-Owner requested customer-visible development-copy cleanup, precise balance-aware order states, existing terminal preservation and integration only after green CI. Fetched main 8db5de501949751135c84abc28a60f9f30dcdc1a and unified 27f88f99e70563ac5f7622e096420451a4f1e413. Local merge6056f84 preserves the newer stale-feed locks, language selectors and approved terminal while retaining unified legacy live-stat updates and both handoffs. Local merge4e1eb01 preserves main's working 2FA challenge within the existing auth design; the imported regression now correctly expects Verify disabled until a code is entered.
-
-Removed futures Coming-soon promise and integration-progress wording in all eight preserved dictionaries; legitimate document preview, KYC pending state, input placeholders, test fixtures and internal docs retained. Added localized unavailable account/chart messages after actual Preview exposed English fallback text. Adopted PR78 customer date/amount locale formatting; admin remains Chinese per Owner. PR73 dictionaries were compared against the expanded current dictionary; PR65 is not applied wholesale because it overlaps and would replace the accepted terminal/account protections. No claim that all four open PRs are fully integrated.
-
-Spot book digits remain12px with19px midprice and restrained12%depth fill. New-order button rejects unknown/insufficient balances and invalid inputs using exact decimal comparison, with the same rule before submission; existing pending intent retries retain their ID and backend validation. No execution, permission, fee, cancellation or production-data bypass.
-
-Fresh backend493/493,decimal4/4,build/lint and all944translation keys pass. Eight-locale browser availability checks2/2 pass. Full E2E and focused final rerun results are in task Outputs and validation record. Historical18auth failures match prior error signatures and remain unresolved; cannot merge under the Owner's green-CI gate. No push,remote merge,deployment or production database change performed. Actual Preview screenshots use unavailable local provider/account state without fake fallback data. Live admin data cleanup, native Safari and complete external-service acceptance remain unverified.
-
-
-<!-- /coderabbit-ai-generated:v1 -->
+- Added a dimmed backdrop behind the mobile chart/order-book bottom drawer, with tap-outside and Escape-key dismissal.
+- Exposed the active drawer as an accessible modal dialog with a specific label; preserved the existing bottom safe-area padding and 72dvh height limit.
+- Extended the mobile stale-market Playwright flow to open and dismiss the order-book drawer while confirming expired depth remains hidden.
+- No market data, order, or financial behavior changed. CI pending.

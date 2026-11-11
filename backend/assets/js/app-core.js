@@ -306,50 +306,28 @@ function updateLivePriceEls(){
   $$('[data-live-low]').forEach(el=>{const sym=el.getAttribute('data-live-low'),quote=market[sym];el.textContent=!state.marketUnavailable&&quote&&Number(quote.low)>0?fmtPrice(quote.low,sym.replace('USDT','')):'—';});
 }
 async function refreshMarket(){
-  if(state.marketRefreshInFlight) return;
-  state.marketRefreshInFlight=true;
-  try{
-    const r=await apiFetch('/market');
-    const accepted=r&&r.ok&&(r.data||r.markets)?applyMarket(r):0;
-    if(accepted>0){
-      state.marketUnavailable=false;hideNetError();updateLivePriceEls();
-    }else{
-      state.marketUnavailable=true;clearMarketQuotes();updateLivePriceEls();
-      showNetError((r&&r.msg)?r.msg:'Market data is temporarily unavailable.',refreshMarket);
-    }
-  }catch{
+  const r=await apiFetch('/market');
+  const accepted=r&&r.ok&&(r.data||r.markets)?applyMarket(r):0;
+  if(accepted>0){
+    state.marketUnavailable=false;hideNetError();updateLivePriceEls();
+  }else{
     state.marketUnavailable=true;clearMarketQuotes();updateLivePriceEls();
-    showNetError('Market data is temporarily unavailable.',refreshMarket);
-  }finally{
-    state.marketRefreshInFlight=false;
-    if(typeof window!=='undefined'){
-      if(typeof window.__btcboxRefreshMarketView==='function')window.__btcboxRefreshMarketView();
-      if(typeof window.__btcboxRefreshHomeMarketView==='function')window.__btcboxRefreshHomeMarketView();
-    }
+    showNetError((r&&r.msg)?r.msg:'Market data is temporarily unavailable.',refreshMarket);
+  }
+  if(typeof window!=='undefined'){
+    if(typeof window.__btcboxRefreshMarketView==='function')window.__btcboxRefreshMarketView();
+    if(typeof window.__btcboxRefreshHomeMarketView==='function')window.__btcboxRefreshHomeMarketView();
   }
 }
 async function refreshDepth(){
-  const sym=state.currentPair; if(!sym||state.depthRefreshInFlight) return;
-  state.depthRefreshInFlight=true;
-  try{
-    const r=await apiAdapter.depth(sym);
-    if(state.currentPair!==sym)return;
-    if(r.ok){
-      state.depthCache={sym:sym,bids:r.bids,asks:r.asks,ts:Date.now()};
-      state.depthUnavailable=false;
-    }else{
-      state.depthUnavailable=true;
-      if(state.depthCache&&state.depthCache.sym===sym)state.depthCache=null;
-    }
-  }catch{
-    if(state.currentPair===sym){
-      state.depthUnavailable=true;
-      if(state.depthCache&&state.depthCache.sym===sym)state.depthCache=null;
-    }
-  }finally{
-    state.depthRefreshInFlight=false;
-    const ob=$('#orderbook');
-    if(ob&&location.hash.indexOf('/trade')>=0&&state.currentPair===sym)ob.innerHTML=renderOrderbook(sym);
+  const sym=state.currentPair; if(!sym) return;
+  const r=await apiAdapter.depth(sym);
+  if(r.ok){
+    state.depthCache={sym:sym,bids:r.bids,asks:r.asks,ts:Date.now()};
+    const ob=$('#orderbook');if(ob&&location.hash.indexOf('/trade')>=0)ob.innerHTML=renderOrderbook(sym);
+  }else if(state.depthCache&&state.depthCache.sym===sym){
+    state.depthCache=null;
+    const ob=$('#orderbook');if(ob&&location.hash.indexOf('/trade')>=0)ob.innerHTML=renderOrderbook(sym);
   }
 }
 

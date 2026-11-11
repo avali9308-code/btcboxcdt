@@ -1,18 +1,17 @@
 # BTCBOX fresh database bootstrap and SQL reference
 
-Status: source-only SQL inventory and fresh-database bootstrap instructions. The product/schema design target is a fresh database with no customer accounts; do not add legacy-user migration or historical production-data migration work. This design assumption is NOT a statement that the currently connected hosted Supabase project is empty: read-only verification on 2026-11-08 found one `public.btcbox_state` row (revision 29, containing three legacy state users and three sessions), seven active Earn catalog rows, and two private test-backup tables. Supabase Auth itself currently has zero users. Treat the connected hosted project as an existing, non-empty environment and do not run the fresh bootstrap against it.
+Status: source-only SQL inventory and bootstrap instructions. The files are not proof of a hosted database installation. The connected hosted project has pre-existing BTCBOX state/data; this empty-schema bootstrap must not be run against it. Any hosted migration requires a separately reviewed, data-preserving reconciliation plan and explicit owner approval.
 
 ## Canonical fresh-schema bootstrap
 
-Use `backend/scripts/bootstrap-empty-database.sh` only against a verified empty BTCBOX schema. The Docker first-init hook (`backend/scripts/docker-init-migrations.sh`) applies the same canonical filename allowlist. Both are fresh-database bootstraps, not upgrade paths. The script:
+Use `backend/scripts/bootstrap-empty-database.sh` only against a verified empty BTCBOX schema. The Docker first-init hook (`backend/scripts/docker-init-migrations.sh`) must apply the same exact canonical filename allowlist. Both are fresh-database bootstraps, not upgrade paths. The script:
 - requires `DATABASE_URL` and `BTCBOX_BOOTSTRAP_CONFIRM=YES`;
 - parses the URL hostname and refuses remote targets unless `BTCBOX_ALLOW_REMOTE_BOOTSTRAP=YES` is explicitly supplied;
 - checks that no BTCBOX-owned tables already exist before applying SQL;
-- applies the 31 canonical SQL files explicitly allowlisted in `backend/scripts/bootstrap-empty-database.sh`;
-- creates the schema only; the first API request atomically inserts the empty `btcbox_state` singleton through `btcbox_save_state` at revision 0, with no demo users or balances;
+- applies the 26 canonical SQL files explicitly allowlisted in `backend/scripts/bootstrap-empty-database.sh`; excluded legacy/optional files and read-only diagnostics are not applied;
 - stops on the first SQL error and never prints the database URL.
 
-The scripts do not clear or overwrite an existing schema. They are not incremental migration runners: Docker's init hook only runs for a new empty data directory, and `run_migrations.sh` is a compatibility alias for the guarded empty-database bootstrap. A persisted Docker volume is not upgraded automatically. Do not run either bootstrap against production or an existing data volume without separate explicit owner approval.
+The scripts do not clear or overwrite an existing schema. They are not incremental migration runners: Docker's init hook only runs for a new empty data directory, and `run_migrations.sh` is a compatibility alias for the guarded empty-database bootstrap. A persisted Docker volume is not upgraded automatically. Do not run either bootstrap against a production database or an existing data volume; a separate versioned, data-preserving upgrade process is required.
 
 ## Exact source SQL order
 
@@ -44,11 +43,6 @@ The current canonical source inventory is:
 24. `0031_seconds_policy_duration_alignment_v1.sql`
 25. `0032_admin_audit_log_filter_indexes_v1.sql`
 26. `0033_withdrawal_legacy_rpc_cleanup_v1.sql`
-27. `0034_financial_audit_duplicate_index_cleanup_v1.sql`
-28. `0035_service_role_privilege_minimization_v1.sql`
-29. `0036_service_role_maintain_privilege_revoke_v1.sql`
-30. `0037_financial_write_rate_limit_scopes_v1.sql`
-31. `0038_withdrawal_first_successful_review_guard_v1.sql`
 
 The legacy `0008_financial_spot_trade_v3.sql` direct-fill RPC was removed because it bypassed the order book and was not called by the API. The durable matching engine now occupies `0008_financial_matching_engine_v1.sql` and is the only supported spot write path. Sequence `0009` is retired and intentionally omitted; the offline migration checker explicitly recognizes retired slots `0009` and `0015`–`0020`. The bootstrap allowlist contains only live numbered SQL files and is tested against the actual source inventory.
 
@@ -76,8 +70,6 @@ Manual deposits follow the chosen half-manual workflow: staff verifies the trans
 - `0031` removes the obsolete fixed Seconds position-duration allowlist; positive duration values are now governed by the active immutable policy, matching the admin policy RPC.
 - `0032` adds two non-destructive indexes on `public.financial_audit_log` — `(action, id desc)` and `(subject_user_id, id desc)` — matching the admin audit-logs query access paths (filtered by action or subject, ordered by id desc). Safe to re-run via `IF NOT EXISTS`.
 - `0033` removes any lingering 9- or 10-argument `create_withdrawal_atomic` overload after `0029`, then asserts that exactly one 11-argument service-role-only function remains. It does not alter withdrawal rows or balances.
-- `0034` removes the duplicate `(subject_user_id, created_at DESC)` index introduced by `0021`; the equivalent `financial_audit_subject_time_idx` from `0002` is retained.
-- `0035` removes unnecessary direct `service_role` table privileges (`DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`) while retaining the single `DELETE` required by expired rate-limit cleanup; existing `SELECT`/`INSERT`/`UPDATE` grants remain unchanged. It also narrows future postgres-owned public-table default grants for those privilege types.
 
 ## Admin bootstrap and financial safety
 
@@ -93,20 +85,25 @@ All financial writes and matching remain fail-closed during source QA. Applying 
 
 ## Validation and release gates
 
-Source CI verifies SQL inventory, shell syntax, bootstrap safety gates and source-level RPC contracts. It does not execute PostgreSQL DDL. Before any authorized hosted install:
-- use a disposable empty PostgreSQL/Supabase environment;
-- apply all 31 files in the exact order above and stop on any error;
+Source CI verifies migration inventory, shell syntax, bootstrap safety gates and source-level RPC contracts. It does not execute PostgreSQL DDL. Before any hosted install:
+- create or use a disposable empty PostgreSQL/Supabase environment;
+- apply all 26 files in the exact order above and stop on any error;
 - verify function signatures, RLS, grants, service-role-only execution and private schema exposure;
 - bootstrap the intended Super Admin and test delegated admin permissions;
 - test manual credit, withdrawal approval/payout completion, spot order idempotency and Seconds order/settlement concurrency/replay without enabling production financial cutover;
 - preserve evidence and the exact SQL/source SHA.
 
-Never infer live database state from source filenames or migration version labels. The currently connected hosted project has not been bootstrapped to this canonical schema and has existing state/catalog/test-backup records. Do not run a migration, bootstrap, or hosted database write as part of source review.
+Never infer live migration state by comparing timestamp registry versions with four-digit source filenames. `backend/scripts/check_migration_status.py` intentionally refuses that unsafe comparison without an explicit reviewed mapping.
 
-Never infer live database state by comparing timestamp registry versions with four-digit source filenames. Do not run a migration, bootstrap, or hosted database write as part of source review.
+## Read-only migration reconciliation evidence
 
-## Existing-schema market-catalogue upgrade
+Before preparing a staging upgrade, capture a schema-only evidence report from an isolated clone:
 
-`backend/supabase/existing-schema-upgrades/0039_existing_schema_market_catalog_upgrade_v1.sql` is an incremental upgrade for an existing BTCBOX database that already contains `financial_matching_markets` but lacks `read_spot_market_snapshot_v1`. It adds only the service-role-only read RPC and seeds four public quote pairs (`BTC`, `ETH`, `SOL`, `BNB` against `USDT`) when no operator configuration exists. Existing rows are never overwritten. It does not enable matching or any financial write path; those remain controlled by the runtime `FINANCIAL_*` flags.
+```bash
+python3 scripts/audit_migration_mapping.py --source-only > migration-source-manifest.json
+STAGING_DATABASE_URL='postgresql://…' python3 scripts/audit_migration_mapping.py > staging-schema-evidence.json
+```
 
-Apply this upgrade only after reading the target schema and confirming the target is an existing deployment missing this specific RPC. It is deliberately excluded from the empty-database bootstrap allowlist, where `0028_admin_rbac_service_rpc_wrappers_v1.sql` supplies the canonical read RPC alongside the audited administrator workflow.
+Install `requirements-postgres-staging.txt` in the isolated audit environment first. The database mode opens a read-only transaction and records the timestamp ledger, canonical source SHA-256 hashes, table/column/constraint/index inventory, function signatures/security settings, and schema/function privilege facts. It does not return application rows, user identifiers, balances, credential values, session data, or secrets. It refuses the known production project reference and ignores `DATABASE_URL`; only `STAGING_DATABASE_URL` is accepted.
+
+The output deliberately remains `MANUAL_REVIEW_REQUIRED`. It is evidence for a human-reviewed migration mapping, not an automatic timestamp-to-four-digit mapping algorithm, migration runner, backup tool, or production authorization. Preserve the JSON reports with the staging change record and review source SHA, ledger versions, and catalog differences together before selecting any pending SQL.

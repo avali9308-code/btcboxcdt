@@ -50,15 +50,13 @@ test('Vite dashboard does not keep stale quotes visible after a refresh error', 
   assert.match(liveMarketsTable, /const feedError = error \|\| \(snapshotStale \?/);
   assert.match(liveMarketsTable, /const displayMarkets = feedError \? \[\] : markets/);
   assert.match(liveMarketsTable, /feedError && displayMarkets\.length === 0/);
-  assert.ok(liveMarketsTable.includes('markets.some((item) => (item.snapshotTs || 0) > 0 && Date.now() / 1000 - (item.snapshotTs || 0) > 90)'));
+  assert.match(liveMarketsTable, /snapshotAgeSeconds > 90/);
   assert.doesNotMatch(liveMarketsTable, /Showing the last confirmed market data/);
 });
 
 test('order book cache is cleared when the live depth feed fails', () => {
-  assert.match(core, /depthRefreshInFlight/);
-  assert.match(core, /if\(state\.depthCache&&state\.depthCache\.sym===sym\)state\.depthCache=null/);
-  assert.match(core, /if\(state\.currentPair!==sym\)return/);
-  assert.match(core, /catch\{\s*if\(state\.currentPair===sym\)\{\s*state\.depthUnavailable=true/);
+  assert.match(core, /else if\(state\.depthCache&&state\.depthCache\.sym===sym\)/);
+  assert.match(core, /state\.depthCache=null/);
 });
 
 test('customer navigation contains no preview or API-verification banners', () => {

@@ -36,23 +36,19 @@ export function OrdersPage() {
   const [error, setError] = useState("");
   const [signedOut, setSignedOut] = useState(false);
   const requestIdRef = useRef(0);
-  const controllerRef = useRef<AbortController | null>(null);
 
-  async function load() {
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
+  async function load(signal?: AbortSignal) {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setOrders([]);
     setError("");
     setSignedOut(false);
     try {
-      const rows = await getOrders(controller.signal);
-      if (!controller.signal.aborted && requestId === requestIdRef.current) setOrders(rows);
+      const rows = await getOrders(signal);
+      if (!signal?.aborted && requestId === requestIdRef.current) setOrders(rows);
     } catch (reason) {
       if (reason instanceof Error && reason.name === "AbortError") return;
-      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
+      if (signal?.aborted || requestId !== requestIdRef.current) return;
       setOrders([]);
       if (reason instanceof ApiError && reason.code === "AUTH_REQUIRED") {
         setSignedOut(true);
@@ -61,10 +57,7 @@ export function OrdersPage() {
         setError(reason instanceof Error ? reason.message : t("Order history is temporarily unavailable."));
       }
     } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-        controllerRef.current = null;
-      }
+      if (!signal?.aborted && requestId === requestIdRef.current) setLoading(false);
     }
   }
 
@@ -107,9 +100,10 @@ export function OrdersPage() {
         </Card>
       )}
 
-      <Card className="overflow-hidden border-brand-border bg-brand-surface ">
-        <CardHeader className="border-b border-brand-border bg-brand-surface-2/50 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--page-accent)]/10 text-[var(--page-accent)]"><ClipboardList className="h-5 w-5"/></span><CardTitle>{t("Order history")}</CardTitle></div><div className="mt-3 flex flex-wrap gap-2 sm:mt-0"><Button variant={openOnly ? "default" : "outline"} size="sm" aria-pressed={openOnly} onClick={() => setOpenOnly(true)}>{t("Open orders")}</Button><Button variant={!openOnly ? "default" : "outline"} size="sm" aria-pressed={!openOnly} onClick={() => setOpenOnly(false)}>{t("Order history")}</Button></div>
+      <Card className="border-brand-border bg-brand-surface">
+        <CardHeader>
+          <CardTitle>{t("Order history")}</CardTitle>
+          <CardDescription>{t("Order history displays records returned by your authenticated account.")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (

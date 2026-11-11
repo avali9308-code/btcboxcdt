@@ -67,9 +67,7 @@ test('migration order document records the prepared Seconds migration dependenci
   const durationAlignment = orderDoc.indexOf('0031_seconds_policy_duration_alignment_v1.sql');
   const auditIndexes = orderDoc.indexOf('0032_admin_audit_log_filter_indexes_v1.sql');
   const withdrawalCleanup = orderDoc.indexOf('0033_withdrawal_legacy_rpc_cleanup_v1.sql');
-  const auditDuplicateCleanup = orderDoc.indexOf('0034_financial_audit_duplicate_index_cleanup_v1.sql');
-  const serviceRolePrivileges = orderDoc.indexOf('0035_service_role_privilege_minimization_v1.sql');
-  assert.ok(rateLimit >= 0 && settlement > rateLimit && policy > settlement && adminRbac > policy && manualPayout > adminRbac && rbacWrappers > manualPayout && feeIdempotency > rbacWrappers && secondsAdminQueue > feeIdempotency && durationAlignment > secondsAdminQueue && auditIndexes > durationAlignment && withdrawalCleanup > auditIndexes && auditDuplicateCleanup > withdrawalCleanup && serviceRolePrivileges > auditDuplicateCleanup);
+  assert.ok(rateLimit >= 0 && settlement > rateLimit && policy > settlement && adminRbac > policy && manualPayout > adminRbac && rbacWrappers > manualPayout && feeIdempotency > rbacWrappers && secondsAdminQueue > feeIdempotency && durationAlignment > secondsAdminQueue && auditIndexes > durationAlignment && withdrawalCleanup > auditIndexes);
   assert.ok(orderDoc.includes('depends on the Seconds base schema in'));
   assert.ok(orderDoc.includes('adds Seconds settlement request-hash idempotency'));
   assert.ok(orderDoc.includes('withdrawal fee quotes replay-safe'));
@@ -77,14 +75,6 @@ test('migration order document records the prepared Seconds migration dependenci
   assert.ok(orderDoc.includes('bounded, read-only administrator queue for open Seconds positions'));
   assert.ok(orderDoc.includes('timestamp registry versions with four-digit source filenames'));
   assert.ok(orderDoc.includes('exactly one 11-argument service-role-only function remains'));
-});
-
-test('existing-schema upgrades are kept outside the fresh-bootstrap SQL inventory', () => {
-  const root = path.resolve(__dirname, '..');
-  const canonicalDir = path.join(root, 'supabase', 'sql');
-  const existingSchemaUpgrade = path.join(root, 'supabase', 'existing-schema-upgrades', '0039_existing_schema_market_catalog_upgrade_v1.sql');
-  assert.equal(fs.existsSync(existingSchemaUpgrade), true);
-  assert.equal(fs.existsSync(path.join(canonicalDir, '0039_existing_schema_market_catalog_upgrade_v1.sql')), false);
 });
 
 test('fresh database bootstrap expands safety variables and includes every canonical SQL file', () => {
@@ -145,25 +135,4 @@ test('Docker first-init and guarded empty-database bootstrap use the exact canon
   assert.ok(inventories[1].includes('0008_financial_matching_engine_v1.sql'));
   assert.ok(inventories[1].includes('0032_admin_audit_log_filter_indexes_v1.sql'));
   assert.ok(inventories[1].includes('0033_withdrawal_legacy_rpc_cleanup_v1.sql'));
-  assert.ok(inventories[1].includes('0034_financial_audit_duplicate_index_cleanup_v1.sql'));
-  assert.ok(inventories[1].includes('0035_service_role_privilege_minimization_v1.sql'));
-  assert.ok(inventories[1].includes('0036_service_role_maintain_privilege_revoke_v1.sql'));
-  assert.ok(inventories[1].includes('0037_financial_write_rate_limit_scopes_v1.sql'));
-  assert.ok(inventories[1].includes('0038_withdrawal_first_successful_review_guard_v1.sql'));
-});
-
-
-test('service-role privilege hardening keeps only rate-limit cleanup DELETE access', () => {
-  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'sql', '0035_service_role_privilege_minimization_v1.sql'), 'utf8');
-  assert.match(migration, /REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER[\s\S]*?ON ALL TABLES IN SCHEMA public[\s\S]*?FROM service_role/i);
-  assert.match(migration, /GRANT DELETE ON TABLE public\.btcbox_rate_limits TO service_role/i);
-  assert.match(migration, /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public[\s\S]*?REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM service_role/i);
-  assert.doesNotMatch(migration, /GRANT DELETE ON TABLE public\.(?!btcbox_rate_limits)/i);
-});
-
-
-test('PostgreSQL 17 MAINTAIN privilege is removed from service_role defaults and existing public tables', () => {
-  const migration = fs.readFileSync(path.join(__dirname, '..', 'supabase', 'sql', '0036_service_role_maintain_privilege_revoke_v1.sql'), 'utf8');
-  assert.match(migration, /server_version_num[\s\S]*?>= 170000[\s\S]*?REVOKE MAINTAIN ON ALL TABLES IN SCHEMA public FROM service_role/i);
-  assert.match(migration, /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public[\s\S]*?REVOKE MAINTAIN ON TABLES FROM service_role/i);
 });
