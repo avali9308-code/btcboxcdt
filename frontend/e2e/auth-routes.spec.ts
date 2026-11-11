@@ -523,7 +523,8 @@ test("Admin KYC approval remains disabled without an uploaded document and secur
   await expect(page.getByRole("button", { name: "Approve" }).nth(0)).toBeDisabled();
   await expect(page.getByRole("button", { name: "Approve" }).nth(1)).toBeDisabled();
   await expect(page.getByText("Identity document upload is required before approval.")).toBeVisible();
-  await expect(page.getByText("Secure document preview could not be generated")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Approve Reject Document" }).getByRole("paragraph")).toContainText("Document preview unavailable; refresh the queue before approval.");
+  await expect(page.getByText("Secure document preview could not be generated")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Open secure image" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Refresh queue" }).click();
@@ -573,6 +574,8 @@ test("Admin payout retry restores the exact TxID after an ambiguous response and
 
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Withdrawal queue" })).toBeVisible();
+  // Approved means staff review passed, not that funds have been sent; only completed is success.
+  await expect(page.getByText("approved", { exact: true })).toHaveClass(/text-brand-warning/);
   await page.getByPlaceholder("Required TxID / reference").fill("0xE2E-PAYOUT-TX-REFERENCE");
   await page.getByRole("button", { name: "Mark paid" }).click();
   await expect(page.getByRole("alert")).toContainText("The same reference has been saved.");
@@ -850,7 +853,7 @@ test("Admin queue reload failure never leaves stale withdrawal actions visible",
   expect(queueReads).toBeGreaterThanOrEqual(2);
 });
 
-test("trade chooser exposes the backend-enabled products and keeps unsupported futures unavailable", async ({ page }) => {
+test("trade chooser advertises supported products without promoting unavailable futures", async ({ page }) => {
   await page.route("**/api/market/pairs", route => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -866,8 +869,8 @@ test("trade chooser exposes the backend-enabled products and keeps unsupported f
   await expect(page.getByRole("heading", { name: "Seconds" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "BTC/USDT" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Earn", exact: true })).toBeVisible();
-  await expect(page.getByText("Futures", { exact: true })).toBeVisible();
-  await expect(page.getByText("Unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Futures", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Unavailable", { exact: true })).toHaveCount(0);
   const earnEntry = page.getByRole("link", { name: "Open" }).nth(2);
   await expect(earnEntry).toHaveAttribute("href", "/earn");
 
@@ -892,7 +895,7 @@ test("registration experience stays clear and usable on a narrow mobile viewport
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
 });
 
-test("public preview landing page is available signed out with market data and registration entry points", async ({ page }) => {
+test("public landing page is available signed out with market data and registration entry points", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
   const mutations: string[] = [];
   page.on("request", request => {
@@ -925,6 +928,22 @@ test("public preview landing page is available signed out with market data and r
   expect(mutations).toEqual([]);
 });
 
+
+test("empty market response never advertises a live market feed", async ({ page }) => {
+  await page.route("**/api/market", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ ok: true, markets: [], data: {} }),
+  }));
+  await page.route("**/api/kline?**", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ ok: true, source: "coinbase", klines: [] }),
+  }));
+
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { name: "Market overview" })).toBeVisible();
+  await expect(page.getByText("Feed unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Live market feed", { exact: true })).toHaveCount(0);
+});
 
 test("Admin user-detail failure clears the previously selected user's financial panel", async ({ page }) => {
   await installAdminE2EIdentity(page);
@@ -1131,7 +1150,7 @@ test("registration layout adapts from mobile to desktop without losing the ident
   }
 });
 
-test("public market preview remains responsive across mobile, tablet and desktop widths", async ({ page }) => {
+test("public market landing page remains responsive across mobile, tablet and desktop widths", async ({ page }) => {
   await page.route("**/api/market", route => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -1165,4 +1184,62 @@ test("public market preview remains responsive across mobile, tablet and desktop
     }));
     expect(dimensions.content, `public preview overflow at ${viewport.width}px`).toBeLessThanOrEqual(dimensions.viewport);
   }
+});
+
+
+test("assets page preserves the last confirmed balances when refresh temporarily fails", async ({ page }) => {
+  let failRefresh = false;
+  await page.route("**/api/account", async (route) => {
+    if (failRefresh) {
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, msg: "internal provider detail" }) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(authenticatedAccountFixture) });
+  });
+
+  await page.goto("/assets");
+  await expect(page.getByText("125.5", { exact: true })).toBeVisible();
+  failRefresh = true;
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await expect(page.getByRole("alert")).toContainText("Account data is temporarily unavailable.");
+  await expect(page.getByText("125.5", { exact: true })).toBeVisible();
+  await expect(page.getByText("internal provider detail")).toHaveCount(0);
+});
+
+test("orders page preserves the last confirmed order when refresh temporarily fails", async ({ page }) => {
+  let failRefresh = false;
+  await page.route("**/api/account", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(authenticatedAccountFixture) });
+  });
+  await page.route("**/api/orders", async (route) => {
+    if (!failRefresh) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          orders: [{
+            order_id: "E2E-STALE-ORDER-001",
+            symbol: "BTC/USDT",
+            side: "buy",
+            type: "limit",
+            price: "65000.00",
+            quantity: "0.001",
+            status: "open",
+            created_at: "2026-11-06T10:00:00Z",
+          }],
+        }),
+      });
+      return;
+    }
+    await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, msg: "internal order provider detail" }) });
+  });
+
+  await page.goto("/orders");
+  await expect(page.getByText("E2E-STALE-ORDER-001")).toBeVisible();
+  failRefresh = true;
+  await page.getByRole("button", { name: "Refresh" }).click();
+  await expect(page.getByRole("alert")).toContainText("Order history is temporarily unavailable.");
+  await expect(page.getByText("E2E-STALE-ORDER-001")).toBeVisible();
+  await expect(page.getByText("internal order provider detail")).toHaveCount(0);
 });
