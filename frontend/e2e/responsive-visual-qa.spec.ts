@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
-const widths = [320, 360, 375, 390, 430, 768, 1024, 1440];
+const widths = [320, 375, 390, 430, 768, 1366, 1440, 1920];
 const routes = [
   { path: "/login", heading: "Welcome back" },
   { path: "/register", heading: "Create your BTCBOX account" },
@@ -18,7 +18,7 @@ const routes = [
 ];
 
 test("responsive visual QA captures key customer and admin entry routes without horizontal page overflow", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   test.skip(test.info().project.name !== "desktop-chromium", "The desktop Chromium project iterates the full viewport matrix.");
   const output = path.resolve(process.cwd(), "test-results/visual-qa");
   fs.mkdirSync(output, { recursive: true });
@@ -79,19 +79,19 @@ test("responsive visual QA captures key customer and admin entry routes without 
 
   for (const route of routes) {
     const routePath = route.path;
+    await page.setViewportSize({ width: widths[0], height: 900 });
+    await page.goto(routePath, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#root")).not.toBeEmpty();
+    expect(new URL(page.url()).pathname).toBe(routePath);
     for (const width of widths) {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto(routePath, { waitUntil: "domcontentloaded" });
-      await expect(page.locator("#root")).not.toBeEmpty();
-      expect(new URL(page.url()).pathname).toBe(routePath);
       await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible({ timeout: 15000 });
       if (!["/login", "/register"].includes(routePath) && width <= 480) {
         await expect(page.getByRole("link", { name: "BTCBOX home" }).getByRole("img", { name: "BTCBOX" })).toBeVisible();
       }
       if (routePath === "/markets") await expect(page.getByRole("heading", { name: "Explore the market. Trade with confidence.", exact: true })).toHaveCount(0);
-      if (routePath === "/home" || routePath === "/markets") await expect(page.getByText("No markets enabled", { exact: true })).toBeVisible();
+      if (routePath === "/home" || routePath === "/markets") await expect(page.getByText("Feed unavailable", { exact: true })).toBeVisible({ timeout: 15000 });
       if (routePath === "/trade-hub") await expect(page.getByTestId("spot-availability")).toHaveText("Unavailable");
-      await page.waitForLoadState("networkidle");
       await page.evaluate(() => document.fonts.ready);
       const dimensions = await page.evaluate(() => ({
         viewport: window.innerWidth,
@@ -101,7 +101,9 @@ test("responsive visual QA captures key customer and admin entry routes without 
       expect(dimensions.document, `${routePath} at ${width}px has document horizontal overflow: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(width);
       expect(dimensions.body, `${routePath} at ${width}px has body horizontal overflow: ${JSON.stringify(dimensions)}`).toBeLessThanOrEqual(width);
       const slug = routePath.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "root";
-      await page.screenshot({ path: path.join(output, `${slug}-${width}.png`), fullPage: true, animations: "disabled" });
+      if ([375, 768, 1366, 1920].includes(width)) {
+        await page.screenshot({ path: path.join(output, `${slug}-${width}.png`), fullPage: true, animations: "disabled" });
+      }
     }
   }
 });

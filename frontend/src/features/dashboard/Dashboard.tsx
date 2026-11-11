@@ -26,10 +26,9 @@ export function Dashboard() {
   const volumeRange = useDashboardStore((state) => state.volumeRange);
   const liquidityInterval = LIQUIDITY_INTERVALS[liquidityRange] || "5m";
   const volumeInterval = VOLUME_INTERVALS[volumeRange] || "1h";
-  const hasMarketSnapshotTime = markets.length > 0 && markets.every((item) => Number.isFinite(item.snapshotTs) && (item.snapshotTs || 0) > 0);
   const marketSnapshotStale = markets.some((item) => (item.snapshotTs || 0) > 0 && Date.now() / 1000 - (item.snapshotTs || 0) > 90);
   const btcMarket = !error && !marketSnapshotStale ? markets.find((item) => item.sym === "BTC") : undefined;
-  const marketFeedStatus = loading ? "Connecting" : error ? "Feed unavailable" : !markets.length ? "No markets enabled" : marketSnapshotStale ? "Snapshot stale" : !hasMarketSnapshotTime ? "Snapshot time unavailable" : "Live market feed";
+  const marketFeedStatus = loading ? "Connecting" : error || !markets.length || marketSnapshotStale ? "Feed unavailable" : "Live market feed";
 
   useEffect(() => {
     // A fresh AbortController per poll attempt: a timed-out or unmount-aborted
@@ -49,11 +48,11 @@ export function Dashboard() {
         if (cancelled) return;
         setMarkets(rows);
         setError("");
-      }).catch((reason: unknown) => {
+      }).catch(() => {
         if (cancelled) return;
-        // Do not leave old quotes on screen as if they were current.
+        // Never show upstream provider diagnostics or stale prices to customers.
         setMarkets([]);
-        setError(reason instanceof Error && reason.name !== "AbortError" ? reason.message : "Market data is temporarily unavailable. Please try again shortly.");
+        setError("Market data is temporarily unavailable. Please try again shortly.");
       }).finally(() => {
         window.clearTimeout(timeoutId);
         refreshing = false;
@@ -115,7 +114,7 @@ export function Dashboard() {
       <Badge variant="outline" className="border-brand-accent/30 bg-brand-accent/10 px-3 py-1 text-brand-text-secondary">
         {t(marketFeedStatus)}
       </Badge>
-    </div>
+    </header>
     {(btcMarket || loading) && <section aria-label={t("Bitcoin market summary")} className="grid gap-3 sm:grid-cols-3">
       <div className="relative min-w-0 overflow-hidden rounded-xl border border-brand-cyan/25 bg-gradient-to-br from-brand-cyan/[0.075] via-brand-surface to-brand-surface p-4 ring-1 ring-brand-cyan/[0.06] sm:p-5">
         <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-brand-cyan"/>
@@ -135,11 +134,6 @@ export function Dashboard() {
         <p className="mt-3 truncate text-xl font-semibold tracking-tight tabular-nums text-brand-text sm:text-2xl">{loading || !btcMarket || !Number.isFinite(Number(btcMarket.vol)) ? "—" : new Intl.NumberFormat(localeTags[language],{notation:"compact",maximumFractionDigits:2}).format(Number(btcMarket.vol)) + " USDT"}</p>
         
       </div>
-    </header>
-    {(btcMarket || loading) && <section aria-label={t("Bitcoin market summary")} className="exchange-summary">
-      <div><p className="text-xs text-brand-text-muted">{t("BTC/USDT last price")}</p><p className="mt-2 type-price">{btcMarket ? btcMarket.price.toLocaleString(numberLocale, {maximumFractionDigits:8}) : "—"} <span className="text-xs font-normal text-brand-text-muted">USDT</span></p></div>
-      <div><p className="text-xs text-brand-text-muted">{t("BTC 24h change")}</p><p className={"mt-2 text-xl font-semibold tabular-nums " + (btcMarket && btcMarket.chg < 0 ? "text-loss" : "text-profit")}>{btcMarket ? (btcMarket.chg > 0 ? "+" : "") + btcMarket.chg.toLocaleString(numberLocale, {minimumFractionDigits:2,maximumFractionDigits:2}) + "%" : "—"}</p></div>
-      <div><p className="text-xs text-brand-text-muted">{t("BTC 24h volume")}</p><p className="mt-2 text-xl font-semibold tabular-nums">{btcMarket ? Number(btcMarket.vol).toLocaleString(numberLocale, {notation:"compact",maximumFractionDigits:2}) : "—"} <span className="text-xs font-normal text-brand-text-muted">USDT</span></p></div>
     </section>}
     <div className="anim-fade-up anim-delay-4 min-w-0">
       <LiveMarketsTable markets={markets} loading={loading} error={error} />
@@ -148,7 +142,6 @@ export function Dashboard() {
     <div id="market-analysis" className="flex scroll-mt-4 flex-wrap items-center justify-between gap-3 px-1 pt-1">
       <div>
         <h2 className="type-section-title text-brand-text">{t("Market analytics")}</h2>
-        <p className="type-body-compact mt-1 text-brand-text-muted">{t("Historical BTC/USDT candles from market providers.")}</p>
       </div>
       <Badge variant="outline" className="shrink-0 border-brand-border bg-brand-surface">
         {liquidityCandles.length ? "BTC/USDT · " + liquidityRange : t("No chart data")}
@@ -162,9 +155,9 @@ export function Dashboard() {
     {!isMarketsPage && <nav aria-label={t("Manage")} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {[{to:"/markets",label:"Markets"},{to:"/trade-hub",label:"Trade"},{to:"/assets",label:"Assets"},{to:"/support",label:"Support"}].map(item => <Button key={item.to} asChild variant="outline"><Link to={item.to}>{t(item.label)} <ArrowUpRight className="ml-auto h-4 w-4" /></Link></Button>)}
     </nav>}
-    <footer className="px-1 pb-2 text-[11px] leading-5 text-brand-text-muted">
+    {isMarketsPage && <footer className="px-1 pb-2 text-[11px] leading-5 text-brand-text-muted">
       TradingView Lightweight Charts™ Copyright (с) 2025 TradingView, Inc.{" "}
       <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-brand-text-secondary">https://www.tradingview.com/</a>
-    </footer>
+    </footer>}
   </div>;
 }

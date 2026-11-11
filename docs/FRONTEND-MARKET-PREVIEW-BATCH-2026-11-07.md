@@ -158,3 +158,34 @@ Admin KYC conflict handling:
 - Frontend CI run `42315614500` completed SUCCESS on source commit `06ddef81192a72b5717125f59b069ac1a478dca6`: npm install, lint, build, Chromium installation, and all 24 desktop/mobile Playwright route smoke tests passed (12 desktop + 12 mobile).
 
 Current branch HEAD at note creation: `51c302a96f069876e438321d3597501fcbc26b54`. No merge, deployment, production database change, or live financial operation was performed.
+
+## Superseding authentication contract — 2026-11-11
+
+This section supersedes the earlier Google-only / email-not-required notes in this historical document. The approved BTCBOX authentication contract is:
+
+- Supabase Email/password registration and sign-in, including email confirmation and password recovery.
+- Google OAuth registration and sign-in.
+- Ethereum and Solana wallet registration/sign-in.
+- Existing BTCBOX username/password authentication remains a separate credential path; it must not be confused with Supabase Email credentials.
+- Supabase-verified Email, Google, and wallet identities are exchanged for a BTCBOX session through the existing Supabase session endpoint. Email identities are accepted by the backend provider allowlist.
+- Email registration must call Supabase Auth `signUp()`; it must not fall back to the legacy `/api/register` endpoint.
+
+Do not remove Email registration/login UI or the Supabase Email Auth methods based on the superseded 2026-11-07 Google-only notes. Preserve Google, wallet, username, account-setup, and two-factor paths. Verify registration using a dedicated test account; do not create or modify production user records without explicit authorization.
+
+
+## Email registration operational prerequisites — 2026-11-11
+
+The React Email registration flow uses Supabase Auth PKCE and redirects confirmed users to `/auth/react-callback`. A successful frontend build alone does not prove that production email delivery and confirmation are configured. Before accepting public registrations, verify these settings in the Supabase Auth project:
+
+1. **Allow new users to sign up** and the Email provider are enabled.
+2. **Site URL** is the actual production origin. Add the exact callback URL `https://btcboxcdt-pi.vercel.app/auth/react-callback` to allowed Redirect URLs for the currently observed Vercel production domain; add local and preview URLs only when needed.
+3. **Custom SMTP is configured and tested** for public users. Supabase's built-in SMTP is restricted to addresses belonging to the Supabase organization and is currently limited to 2 emails per hour; it is not a production delivery service.
+4. Because this client uses **PKCE**, the confirmation link must be opened in the same browser and device that started registration, unless the confirmation flow is deliberately redesigned for cross-device verification.
+5. Verify signup and password recovery using a dedicated test account. Do not disable email confirmation as a production workaround, and do not create test users in production without explicit authorization.
+
+Current evidence boundary: Vercel has the public Supabase Auth URL and publishable-key environment variables configured for production/preview/development. The available Supabase project connector does not expose the project's custom SMTP or allowed Redirect URL settings, so those settings remain unverified. Recent Auth audit logs show Google signups and Email sign-in activity, but no Email signup success event in the queried window; this is not proof of a failed signup attempt.
+
+Official references:
+- Supabase custom SMTP: https://supabase.com/docs/guides/auth/auth-smtp
+- Supabase PKCE flow: https://supabase.com/docs/guides/auth/sessions/pkce-flow
+- Supabase redirect URLs: https://supabase.com/docs/guides/auth/redirect-urls

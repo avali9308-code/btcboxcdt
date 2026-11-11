@@ -13,11 +13,23 @@ export function AuthPage({ mode, redirectTo }: { mode: "login" | "register"; red
   const { t, language, setLanguage, canChangeLanguage } = useI18n();
   const {
     status, needsCredentials, busy, error, notice, googleEnabled, walletEnabled, ethereumWallets,
-    signInWithGoogle, signInWithUsername, signInWithWeb3,
+    signInWithGoogle, signInWithUsername, signInWithWeb3, signInWithEmail, signUpWithEmail, requestPasswordReset,
     verifyTwoFactor, clearError,
   } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+
+  const translateAuthMessage = (message: string) => {
+    const normalized = message.toLowerCase();
+    if (normalized.includes("email address not authorized") || normalized.includes("email_address_not_authorized")) return t("Email address not authorized");
+    if (normalized.includes("email rate limit exceeded") || normalized.includes("over_email_send_rate_limit")) return t("Email rate limit exceeded");
+    if (normalized.includes("user already registered")) return t("User already registered");
+    if (normalized.includes("invalid login credentials")) return t("Invalid login credentials");
+    if (normalized.includes("email not confirmed")) return t("Email not confirmed");
+    return t(message);
+  };
   const [showPassword, setShowPassword] = useState(false);
   const [verifyCode, setVerifyCode] = useState("");
   const [verifyBusy, setVerifyBusy] = useState(false);
@@ -50,6 +62,19 @@ export function AuthPage({ mode, redirectTo }: { mode: "login" | "register"; red
   const submitUsernameLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try { await signInWithUsername(username, password); }
+    catch { /* AuthProvider displays the safe error. */ }
+  };
+
+  const submitEmailAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      if (registering) await signUpWithEmail(emailAddress, emailPassword);
+      else await signInWithEmail(emailAddress, emailPassword);
+    } catch { /* AuthProvider displays the safe error. */ }
+  };
+
+  const submitEmailPasswordReset = async () => {
+    try { await requestPasswordReset(emailAddress); }
     catch { /* AuthProvider displays the safe error. */ }
   };
 
@@ -100,7 +125,7 @@ export function AuthPage({ mode, redirectTo }: { mode: "login" | "register"; red
         </h1>
         <p className="mt-5 max-w-[480px] text-base leading-7 text-brand-text-secondary">
           {registering
-            ? t("Create your BTCBOX account with Google or your wallet, then complete your account setup.")
+            ? t("Create your BTCBOX account with email or Google, verify your identity, and complete your account setup.")
             : t("Access your BTCBOX account with your username, Google or a supported crypto wallet.")}
         </p>
         <div className="mt-9 grid max-w-[520px] gap-3 sm:grid-cols-2">
@@ -140,7 +165,7 @@ export function AuthPage({ mode, redirectTo }: { mode: "login" | "register"; red
             {(status === "two-factor" || registering) && <CardDescription className="max-w-[380px] text-sm leading-6 text-brand-text-muted">
               {status === "two-factor"
                 ? t("Enter your authenticator code to finish signing in.")
-                : t("Sign in with Google or connect your wallet, then complete your BTCBOX account setup.")}
+                : t("Create your BTCBOX account with email or Google, verify your identity, and complete your account setup.")}
             </CardDescription>}
             {status !== "two-factor" && <div data-testid="auth-mode-switcher" className="grid grid-cols-2 rounded-xl border border-brand-border bg-brand-surface-2 p-1 text-sm font-semibold">
               <Link to="/login" className={`flex min-h-10 items-center justify-center rounded-lg transition-colors ${!registering ? "bg-brand-accent text-white shadow-sm" : "text-brand-text-secondary hover:text-brand-text"}`}>{t("Sign in")}</Link>
@@ -152,7 +177,7 @@ export function AuthPage({ mode, redirectTo }: { mode: "login" | "register"; red
               <span className="min-w-0 break-words">{t(error)}{/already registered|already linked/i.test(error) && <> <Link to="/login" className="font-semibold underline underline-offset-4 hover:opacity-80">{t("Go to sign in")}</Link></>}</span>
               <button type="button" aria-label={t("Dismiss sign-in error")} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-2 text-xs font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/70" onClick={clearError}>{t("Dismiss")}</button>
             </div>}
-            {notice && <div role="status" className="rounded-lg border border-brand-border bg-brand-surface-2 p-3 text-sm text-brand-text-secondary">{t(notice)}</div>}
+            {notice && <div role="status" className="rounded-lg border border-brand-border bg-brand-surface-2 p-3 text-sm text-brand-text-secondary">{translateAuthMessage(notice)}</div>}
 
             {status === "two-factor" ? <form className="space-y-3" aria-busy={verifyBusy} onSubmit={async event => {
               event.preventDefault(); if (verifyBusy) return; setVerifyBusy(true);
@@ -178,6 +203,21 @@ export function AuthPage({ mode, redirectTo }: { mode: "login" | "register"; red
                   <KeyRound className="mr-2 h-4 w-4" /> {busy ? t("Signing in…") : t("Sign in with username")}
                 </Button>
               </form>}
+
+              <form className="space-y-3 border-t border-brand-border pt-4" aria-busy={busy} onSubmit={submitEmailAuth}>
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-brand-text-secondary">{t("Email address")}</span>
+                  <Input aria-label={t("Email address")} className="h-12" type="email" value={emailAddress} onChange={event => setEmailAddress(event.target.value)} autoComplete="email" inputMode="email" maxLength={254} placeholder={t("Email address")} required />
+                </label>
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-brand-text-secondary">{t("Email password")}</span>
+                  <Input aria-label={t("Email password")} className="h-12" type="password" value={emailPassword} onChange={event => setEmailPassword(event.target.value)} autoComplete={registering ? "new-password" : "current-password"} minLength={8} maxLength={128} placeholder={t("Email password")} required />
+                </label>
+                <Button type="submit" className="min-h-12 w-full" aria-busy={busy} disabled={busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress.trim()) || emailPassword.length < 8}>
+                  {busy ? (registering ? t("Creating account…") : t("Signing in…")) : t(registering ? "Create account with email" : "Sign in with email")}
+                </Button>
+                {!registering && <button type="button" className="flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-medium text-brand-text-secondary underline-offset-4 hover:text-brand-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/70 disabled:opacity-50" disabled={busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress.trim())} onClick={() => void submitEmailPasswordReset()}>{t("Forgot password?")}</button>}
+              </form>
 
               {identityButtons}
 

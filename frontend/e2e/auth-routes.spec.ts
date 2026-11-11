@@ -159,7 +159,7 @@ test("email registration submits to Supabase and requires mailbox confirmation",
   await page.getByLabel("Email address").fill("new-user@example.invalid");
   await page.getByLabel("Email password").fill("StrongPassword123!");
   await page.getByRole("button", { name: "Create account with email" }).click();
-  await expect(page.getByText("Registration received. Please check your email and confirm your address before signing in.")).toBeVisible();
+  await expect(page.getByText("Registration received. Check your email and open the confirmation link in this same browser and device before signing in.")).toBeVisible();
 });
 
 test("forgot password requests Supabase recovery without revealing whether an account exists", async ({ page }) => {
@@ -562,7 +562,8 @@ async function installAdminE2EIdentity(page: import("@playwright/test").Page) {
   }));
 }
 
-test("Admin withdrawal refresh failure stays a read-only error and cannot imply a financial action", async ({ page }) => {
+test("Admin withdrawal refresh failure stays read-only and the layout fits UI V1.0 widths", async ({ page }) => {
+  test.setTimeout(90_000);
   await installAdminE2EIdentity(page);
   let queueReads = 0;
   let failNextQueueRead = false;
@@ -598,6 +599,14 @@ test("Admin withdrawal refresh failure stays a read-only error and cannot imply 
   await expect(page.getByRole("heading", { name: "提现队列" })).toBeVisible();
   await expect(page.getByText("E2E-WITHDRAWAL-001")).toBeVisible();
   await expect(page.getByRole("button", { name: "标记已付款" })).toBeDisabled();
+
+  for (const width of [375, 390, 430, 768, 1366, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "提现队列" })).toBeVisible();
+    const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(hasHorizontalOverflow, `admin page must not overflow horizontally at ${width}px`).toBe(false);
+  }
 
   failNextQueueRead = true;
   await page.getByRole("button", { name: "刷新队列" }).click();
@@ -1174,7 +1183,7 @@ test("Admin rapid user selection ignores an older detail response", async ({ pag
   expect(detailReads).toBe(2);
 });
 
-test("public preview distinguishes server snapshot time from upstream provider time", async ({ page }) => {
+test("public market UI keeps provider timestamps out of customer-facing pages", async ({ page }) => {
   const now = Math.floor(Date.now() / 1000);
   await page.route("**/api/market", route => route.fulfill({
     status: 200,
@@ -1188,9 +1197,11 @@ test("public preview distinguishes server snapshot time from upstream provider t
 
   await page.goto("/home");
 
-  await page.getByText("Market data", { exact: true }).click();
-  await expect(page.getByText(/Server snapshot ·/)).toBeVisible();
-  await expect(page.getByLabel(/Provider snapshot coinbase .* \d+s ago/)).toBeVisible();
+  await expect(page.getByText("Market data", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Server snapshot|Provider snapshot|market service snapshot|Snapshot stale|Snapshot time unavailable|coinbase/i)).toHaveCount(0);
+  await expect(page.getByText("Market analytics", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "1h", exact: true })).toHaveCount(0);
+  await expect(page.getByText("BTC/USDT", { exact: true }).first()).toBeVisible();
 });
 
 test("Admin ignores a withdrawal queue response from a tab opened earlier", async ({ page }) => {
@@ -1310,8 +1321,11 @@ test("Google and Wallet provider entries have matching dimensions and responsive
     { width: 360, height: 780 },
     { width: 375, height: 812 },
     { width: 390, height: 844 },
+    { width: 430, height: 900 },
     { width: 768, height: 900 },
+    { width: 1366, height: 1000 },
     { width: 1440, height: 1000 },
+    { width: 1920, height: 1080 },
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/register");
