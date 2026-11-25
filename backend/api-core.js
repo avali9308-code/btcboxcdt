@@ -2235,16 +2235,20 @@ async function handleRequest(event, context) {
   if (path === '2fa/enable' && method === 'POST') {
     if (!user) return json({ ok: false, msg: 'Not signed in.', need_login: true }, 401);
     if (user.twofa_enabled) return json({ ok: false, code: 'TWOFA_ALREADY_ENABLED', msg: 'Two-factor authentication is already enabled.' }, 409);
-    if (Array.isArray(user.auth_providers) && user.auth_providers.length) {
-      const sessionRecord = getSessionRecord(db, event);
-      const createdAt = Number(sessionRecord && sessionRecord.session && sessionRecord.session.created_at);
-      if (!Number.isFinite(createdAt) || Date.now() - createdAt > 5 * 60 * 1000) {
-        return json({ ok: false, code: 'REAUTH_REQUIRED', msg: 'Please sign in again before enabling two-factor authentication.' }, 403);
-      }
-    } else {
+    // Prefer BTCBOX local credentials when present, even for hybrid OAuth accounts.
+    // OAuth-only accounts use a recent authenticated session instead.
+    const hasLocalPassword = !!(user.login_password_hash && user.login_password_salt && user.login_password_algo === 'pbkdf2-sha256-600000');
+    if (hasLocalPassword) {
       { const rl = await rateCheckShared('twofa_setup_password', String(user.uid)); if (rl.unavailable) return rateLimitUnavailableJson(); if (rl.limited) return rateLimitedJson(rl.retryAfter); }
       const currentPassword = String(body.current_password || '');
       if (!currentPassword || !verifyBtcboxLoginPassword(user, currentPassword)) return json({ ok: false, code: 'REAUTH_FAILED', msg: 'The current login password is incorrect.' }, 403);
+    } else {
+      const sessionRecord = getSessionRecord(db, event);
+      const createdAt = Number(sessionRecord && sessionRecord.session && sessionRecord.session.created_at);
+      const sessionAge = Date.now() - createdAt;
+      if (!Number.isFinite(createdAt) || !Number.isFinite(sessionAge) || sessionAge < 0 || sessionAge > 5 * 60 * 1000) {
+        return json({ ok: false, code: 'REAUTH_REQUIRED', msg: 'Please sign in again before enabling two-factor authentication.' }, 403);
+      }
     }
     if (!user.twofa_secret) { user.twofa_secret = genTotpSecret(); delete user.twofa_last_used_step; }
     try { await saveDB(db); }
