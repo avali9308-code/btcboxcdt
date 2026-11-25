@@ -528,7 +528,7 @@
   "Choose a username": "Escolha um nome de utilizador",
   "3–24 letters, numbers or underscores": "3–24 letras, números ou sublinhados",
   "Create a password": "Crie uma palavra-passe",
-  "At least 12 characters": "Pelo menos 12 caracteres",
+  "At least 8 characters": "Pelo menos 8 caracteres",
   "Confirm password": "Confirmar palavra-passe",
   "Enter the password again": "Introduza novamente a palavra-passe",
   "Passwords do not match.": "As palavras-passe não coincidem.",
