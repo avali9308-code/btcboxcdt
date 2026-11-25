@@ -8,6 +8,8 @@ const api = fs.readFileSync(path.join(root, 'backend/api-core.js'), 'utf8');
 const page = fs.readFileSync(path.join(root, 'frontend/src/features/account/FundPasswordPage.tsx'), 'utf8');
 const securityPage = fs.readFileSync(path.join(root, 'frontend/src/features/account/AccountSecurityPage.tsx'), 'utf8');
 const twoFactorCard = fs.readFileSync(path.join(root, 'frontend/src/features/account/TwoFactorCard.tsx'), 'utf8');
+const authPages = fs.readFileSync(path.join(root, 'frontend/src/features/auth/AuthPages.tsx'), 'utf8');
+const auth = fs.readFileSync(path.join(root, 'frontend/src/lib/auth.tsx'), 'utf8');
 
 test('fund-password changes do not require 2FA; use password or recent OAuth sign-in proof', () => {
   const start = api.indexOf("if (path === 'settings/fundpwd' && method === 'POST')");
@@ -89,4 +91,18 @@ test('withdrawal customer copy does not expose staff review or manual payout wor
 
 test('account password capability flag requires the complete supported BTCBOX credential tuple', () => {
   assert.match(api, /has_login_password: !!\(user\.login_password_hash && user\.login_password_salt && user\.login_password_algo === 'pbkdf2-sha256-600000'\)/);
+});
+
+
+test('email registration, password setup and recovery use an 8-character minimum without blocking legacy sign-in', () => {
+  assert.match(authPages, /if \(password\.length < 8 \|\| password\.length > 128\)/);
+  assert.match(authPages, /minLength=\{8\} maxLength=\{128\} placeholder=\{t\("Create a password"\)\}/);
+  assert.match(authPages, /minLength=\{8\} maxLength=\{128\} placeholder=\{t\("Confirm your password"\)\}/);
+  assert.match(authPages, /autoComplete="current-password" maxLength=\{128\}/);
+  assert.match(authPages, /newPassword\.length < 8/);
+  assert.match(auth, /const setSupabaseLoginPassword = useCallback\(async \(password: string\) => \{\s*if \(password\.length < 8 \|\| password\.length > 128\)/);
+  assert.match(auth, /const signUpWithEmail = useCallback\(async \(address: string, password: string\) => \{\s*if \(password\.length < 8 \|\| password\.length > 128\)/);
+  assert.match(auth, /const completePasswordRecovery = useCallback\(async \(password: string\) => \{\s*if \(password\.length < 8 \|\| password\.length > 128\)/);
+  assert.match(auth, /resetPasswordForEmail\(address\.trim\(\)/);
+  assert.match(auth, /flow=recovery/);
 });
