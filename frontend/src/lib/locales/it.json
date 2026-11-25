@@ -1843,5 +1843,10 @@
   "BTCBOX login password": "Password di accesso BTCBOX",
   "Your BTCBOX login password is required to start setup.": "Per iniziare la configurazione è necessaria la password di accesso BTCBOX.",
   "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "Accedi di nuovo entro i 5 minuti precedenti alla configurazione. Gli account che usano solo OAuth non richiedono un'altra password.",
-  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "L'esito della richiesta non è ancora confermato. Inserisci nuovamente la password dei fondi e, se la 2FA è attiva, il codice dell'autenticatore; quindi riprova con lo stesso ID richiesta."
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "L'esito della richiesta non è ancora confermato. Inserisci nuovamente la password dei fondi e, se la 2FA è attiva, il codice dell'autenticatore; quindi riprova con lo stesso ID richiesta.",
+  "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.": "Per sicurezza, inserisci qui sotto la password di accesso attuale per confermare la modifica. Non è necessario uscire o accedere di nuovo.",
+  "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.": "Per gli account che usano solo Google o un wallet, potrebbe essere necessario un accesso recente per confermare la modifica.",
+  "Confirm current login password": "Conferma la password di accesso attuale",
+  "Withdrawal request submitted. You can track its progress in withdrawal history.": "Richiesta di prelievo inviata. Puoi seguirne l'avanzamento nella cronologia dei prelievi.",
+  "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history.": "Scegli un indirizzo salvato e inserisci l'importo da prelevare. Puoi controllare lo stato nella cronologia dei prelievi."
 }
