@@ -1835,5 +1835,13 @@
   "OAuth accounts must enable two-factor authentication before setting a fund password.": "OAuth 账户必须先启用双重身份验证，才能设置资金密码。",
   "Open security settings": "打开安全设置",
   "Saving…": "正在保存…",
-  "Save fund password": "保存资金密码"
+  "Save fund password": "保存资金密码",
+  "Email sign-in password": "邮箱登录密码",
+  "Email account": "邮箱账户",
+  "Set or change the password for this email sign-in method. This does not create or change a BTCBOX username password; your account and UID stay the same.": "设置或修改此邮箱登录方式的密码。这不会创建或修改 BTCBOX 用户名登录密码，账户和 UID 保持不变。",
+  "Enter your BTCBOX login password to continue": "请输入 BTCBOX 登录密码以继续",
+  "BTCBOX login password": "BTCBOX 登录密码",
+  "Your BTCBOX login password is required to start setup.": "开始设置需要验证 BTCBOX 登录密码。",
+  "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "请在开始设置前 5 分钟内重新登录。仅使用 OAuth 登录的账户无需额外密码。",
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "请求结果尚未确认。请重新输入资金密码；如果已启用 2FA，也请填写验证器代码，然后使用相同请求 ID 重试。"
 }
