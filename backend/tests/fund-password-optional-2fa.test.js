@@ -86,3 +86,7 @@ test('withdrawal customer copy does not expose staff review or manual payout wor
   assert.match(pages, /t\("Submit withdrawal"\)/);
   assert.doesNotMatch(pages, /Submit for staff review|Withdrawal submitted for staff review|staff review and manually pay approved requests/);
 });
+
+test('account password capability flag requires the complete supported BTCBOX credential tuple', () => {
+  assert.match(api, /has_login_password: !!\(user\.login_password_hash && user\.login_password_salt && user\.login_password_algo === 'pbkdf2-sha256-600000'\)/);
+});
