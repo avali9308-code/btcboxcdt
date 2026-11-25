@@ -1835,5 +1835,13 @@
   "OAuth accounts must enable two-factor authentication before setting a fund password.": "OAuth accounts must enable two-factor authentication before setting a fund password.",
   "Open security settings": "Open security settings",
   "Saving…": "Saving…",
-  "Save fund password": "Save fund password"
+  "Save fund password": "Save fund password",
+  "Email sign-in password": "Email sign-in password",
+  "Email account": "Email account",
+  "Set or change the password for this email sign-in method. This does not create or change a BTCBOX username password; your account and UID stay the same.": "Set or change the password for this email sign-in method. This does not create or change a BTCBOX username password; your account and UID stay the same.",
+  "Enter your BTCBOX login password to continue": "Enter your BTCBOX login password to continue",
+  "BTCBOX login password": "BTCBOX login password",
+  "Your BTCBOX login password is required to start setup.": "Your BTCBOX login password is required to start setup.",
+  "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.",
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID."
 }
