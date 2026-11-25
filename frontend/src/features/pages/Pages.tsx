@@ -1520,7 +1520,7 @@ export function WithdrawPage(){
      {error?<p role="alert" className="text-sm text-brand-danger">{error}</p>:null}
      {actionMessage?<p role="status" className="text-sm text-brand-success">{actionMessage}</p>:null}
      <Button type="submit" className="min-h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" disabled={!canSubmit}>{submitting?t("Submitting…"):pendingIntent?t("Retry same request"):t("Submit for staff review")}</Button>
-     {pendingIntent?<p className="break-all text-xs text-brand-text-muted">{t("Request result is not yet confirmed. Re-enter your fund password and 2FA code, then retry with the same request ID.")} · {pendingIntent.request_id}</p>:null}
+     {pendingIntent?<p className="break-all text-xs text-brand-text-muted">{t("Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.")} · {pendingIntent.request_id}</p>:null}
     </form>}
    </CardContent></Card>
 ) : null}
