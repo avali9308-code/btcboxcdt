@@ -524,7 +524,7 @@
   "Choose a username": "ユーザー名を設定",
   "3–24 letters, numbers or underscores": "英小文字、数字、アンダースコアを3～24文字で入力",
   "Create a password": "パスワードを作成",
-  "At least 12 characters": "12文字以上",
+  "At least 8 characters": "8文字以上",
   "Confirm password": "パスワードを確認",
   "Enter the password again": "パスワードをもう一度入力",
   "Saving securely…": "安全に保存中…",
