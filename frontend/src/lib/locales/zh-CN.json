@@ -543,7 +543,7 @@
   "Choose a username": "选择用户名",
   "3–24 letters, numbers or underscores": "3–24 个字母、数字或下划线",
   "Create a password": "创建密码",
-  "At least 12 characters": "至少 12 个字符",
+  "At least 8 characters": "至少 8 个字符",
   "Confirm password": "确认密码",
   "Enter the password again": "再次输入密码",
   "Passwords do not match.": "两次输入的密码不一致。",
