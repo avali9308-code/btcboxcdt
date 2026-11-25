@@ -111,6 +111,20 @@ test('email registration, password setup and recovery use an 8-character minimum
 
 
 
+test('Supabase email login rejects duplicate legacy BTCBOX email matches instead of choosing an arbitrary UID', () => {
+  const start = api.indexOf("// ---------- POST /api/supabase-login");
+  const end = api.indexOf("// ---------- POST /api/logout", start);
+  assert.ok(start >= 0 && end > start, 'Supabase login route exists');
+  const route = api.slice(start, end);
+  const emailMatches = route.indexOf("const emailMatches = Object.values(db.users).filter");
+  const ambiguous = route.indexOf("BTCBOX_EMAIL_ACCOUNT_AMBIGUOUS");
+  const allocate = route.indexOf("const uid = String(db.next_uid++)");
+  assert.ok(emailMatches >= 0 && ambiguous > emailMatches, 'all legacy email matches are counted before choosing an account');
+  assert.ok(allocate > ambiguous, 'ambiguous email matches are rejected before new UID allocation');
+  assert.match(route, /if \(emailMatches\.length > 1\)/);
+  assert.match(route, /user = emailMatches\[0\] \|\| null/);
+});
+
 test('Supabase email sign-in reuses the existing BTCBOX UID and rejects email identity collisions before allocating a new UID', () => {
   const start = api.indexOf("// ---------- POST /api/supabase-login");
   const end = api.indexOf("// ---------- POST /api/logout", start);
