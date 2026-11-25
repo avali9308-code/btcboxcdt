@@ -1843,5 +1843,10 @@
   "BTCBOX login password": "Senha de acesso BTCBOX",
   "Your BTCBOX login password is required to start setup.": "Sua senha de acesso BTCBOX é necessária para iniciar a configuração.",
   "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "Entre novamente nos 5 minutos anteriores à configuração. Contas que usam somente OAuth não precisam de uma senha adicional.",
-  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "O resultado da solicitação ainda não foi confirmado. Digite novamente sua senha de fundos e, se a 2FA estiver ativada, o código do autenticador; depois, tente novamente com o mesmo ID de solicitação."
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "O resultado da solicitação ainda não foi confirmado. Digite novamente sua senha de fundos e, se a 2FA estiver ativada, o código do autenticador; depois, tente novamente com o mesmo ID de solicitação.",
+  "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.": "Por segurança, digite sua senha de acesso atual abaixo para confirmar esta alteração. Não é necessário sair nem entrar novamente.",
+  "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.": "Contas que usam apenas Google ou uma carteira podem precisar de um acesso recente para confirmar esta alteração.",
+  "Confirm current login password": "Confirmar senha de acesso atual",
+  "Withdrawal request submitted. You can track its progress in withdrawal history.": "Solicitação de saque enviada. Você pode acompanhar o andamento no histórico de saques.",
+  "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history.": "Escolha um endereço salvo e informe o valor que deseja sacar. Você pode acompanhar o status no histórico de saques."
 }
