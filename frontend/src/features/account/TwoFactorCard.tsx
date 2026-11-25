@@ -161,22 +161,20 @@ export function TwoFactorCard({ account, onChanged }: { account: AccountSnapshot
 
         {mode === "enrolling" && !secret && (
           <form className="mt-4 space-y-3" onSubmit={startEnrollment}>
-            <label className="block space-y-1.5">
-              {account?.has_login_password === true && (
-                <>
-                  <span className="text-[11.5px] text-brand-text-muted">{t("Enter your BTCBOX login password to continue")}</span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    aria-label={t("BTCBOX login password")}
-                    required
-                    className="h-10 w-full rounded-md border border-brand-border bg-brand-surface-2 px-3 text-[13px] text-brand-text outline-none focus:border-brand-accent"
-                  />
-                </>
-              )}
-            </label>
+            {account?.has_login_password === true && (
+              <label className="block space-y-1.5">
+                <span className="text-[11.5px] text-brand-text-muted">{t("Enter your BTCBOX login password to continue")}</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  aria-label={t("BTCBOX login password")}
+                  required
+                  className="h-10 w-full rounded-md border border-brand-border bg-brand-surface-2 px-3 text-[13px] text-brand-text outline-none focus:border-brand-accent"
+                />
+              </label>
+            )}
             <p className="text-[11px] leading-relaxed text-brand-text-muted">
               {account?.has_login_password === true ? t("Your BTCBOX login password is required to start setup.") : t("Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.")}
             </p>
