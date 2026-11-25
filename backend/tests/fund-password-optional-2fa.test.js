@@ -131,7 +131,7 @@ test('Supabase email sign-in reuses the existing BTCBOX UID and rejects email id
   assert.ok(start >= 0 && end > start, 'Supabase login route exists');
   const route = api.slice(start, end);
   const bySupabaseId = route.indexOf("Object.values(db.users).find(function (u) { return isSupabaseIdentityLinked(u, supabaseUserId); })");
-  const byEmail = route.indexOf("if (!user && email) user = Object.values(db.users).find");
+  const byEmail = route.indexOf("if (!user && email) {");
   const mismatch = route.indexOf("SUPABASE_IDENTITY_MISMATCH");
   const allocate = route.indexOf("const uid = String(db.next_uid++)");
   assert.ok(bySupabaseId >= 0 && byEmail > bySupabaseId, 'existing account is resolved by stable Supabase ID before email fallback');
