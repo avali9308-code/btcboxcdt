@@ -527,7 +527,7 @@
   "Choose a username": "Elige un nombre de usuario",
   "3–24 letters, numbers or underscores": "De 3 a 24 letras, números o guiones bajos",
   "Create a password": "Crea una contraseña",
-  "At least 12 characters": "Al menos 12 caracteres",
+  "At least 8 characters": "Al menos 8 caracteres",
   "Confirm password": "Confirma la contraseña",
   "Enter the password again": "Vuelve a introducir la contraseña",
   "Passwords do not match.": "Las contraseñas no coinciden.",
