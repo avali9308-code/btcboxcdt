@@ -326,7 +326,7 @@ export function AuthCallbackPage() {
     event.preventDefault();
     setRecoveryError("");
     if (newPassword.length < 8 || newPassword.length > 128) {
-      setRecoveryError("Use a password between 12 and 128 characters.");
+      setRecoveryError("Use a password between 8 and 128 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -347,7 +347,7 @@ export function AuthCallbackPage() {
       <CardContent className="px-5 pb-7 sm:px-8">
         <form className="space-y-3" aria-busy={busy} onSubmit={submitRecovery}>
           <label className="block space-y-1.5 text-sm"><span className="text-brand-text-secondary">{t("New password")}</span><Input className="h-12" type="password" value={newPassword} onChange={event => setNewPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={128} required /></label>
-          <label className="block space-y-1.5 text-sm"><span className="text-brand-text-secondary">{t("Confirm new password")}</span><Input className="h-12" type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={12} maxLength={128} required /></label>
+          <label className="block space-y-1.5 text-sm"><span className="text-brand-text-secondary">{t("Confirm new password")}</span><Input className="h-12" type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={128} required /></label>
           {(recoveryError || error) && <p role="alert" className="rounded-lg border border-loss/30 bg-loss/10 p-3 text-sm text-loss">{t(recoveryError || error)}</p>}
           <Button type="submit" className="min-h-12 w-full" disabled={busy || newPassword.length < 8 || newPassword !== confirmPassword}>{busy ? t("Updating password…") : t("Update password")}</Button>
         </form>
