@@ -1835,5 +1835,13 @@
   "OAuth accounts must enable two-factor authentication before setting a fund password.": "OAuthアカウントで資金パスワードを設定するには、先に2要素認証を有効にしてください。",
   "Open security settings": "セキュリティ設定を開く",
   "Saving…": "保存中…",
-  "Save fund password": "資金パスワードを保存"
+  "Save fund password": "資金パスワードを保存",
+  "Email sign-in password": "メールログインパスワード",
+  "Email account": "メールアカウント",
+  "Set or change the password for this email sign-in method. This does not create or change a BTCBOX username password; your account and UID stay the same.": "このメールログイン方法のパスワードを設定または変更します。BTCBOXユーザー名ログイン用パスワードは作成・変更されず、アカウントとUIDも変わりません。",
+  "Enter your BTCBOX login password to continue": "続行するにはBTCBOXログインパスワードを入力してください",
+  "BTCBOX login password": "BTCBOXログインパスワード",
+  "Your BTCBOX login password is required to start setup.": "設定を開始するにはBTCBOXログインパスワードが必要です。",
+  "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "設定前に5分以内に再ログインしてください。OAuthのみのアカウントでは追加のパスワードは不要です。",
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "リクエスト結果はまだ確認できていません。資金パスワードを再入力し、2FAを有効にしている場合は認証コードも入力して、同じリクエストIDで再試行してください。"
 }
