@@ -1843,5 +1843,10 @@
   "BTCBOX login password": "BTCBOX 登录密码",
   "Your BTCBOX login password is required to start setup.": "开始设置需要验证 BTCBOX 登录密码。",
   "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "请在开始设置前 5 分钟内重新登录。仅使用 OAuth 登录的账户无需额外密码。",
-  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "请求结果尚未确认。请重新输入资金密码；如果已启用 2FA，也请填写验证器代码，然后使用相同请求 ID 重试。"
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "请求结果尚未确认。请重新输入资金密码；如果已启用 2FA，也请填写验证器代码，然后使用相同请求 ID 重试。",
+  "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.": "为保障账户安全，请在下方输入当前登录密码确认此次修改。无需退出账户或重新登录。",
+  "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.": "仅使用 Google 或钱包登录的账户，可能需要近期重新登录后才能确认此次修改。",
+  "Confirm current login password": "确认当前登录密码",
+  "Withdrawal request submitted. You can track its progress in withdrawal history.": "提现申请已提交，可在提现记录中查看进度。",
+  "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history.": "请选择已保存的提现地址并输入提现金额。你可以在提现记录中查看申请状态。"
 }
