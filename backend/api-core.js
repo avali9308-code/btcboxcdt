@@ -1613,7 +1613,17 @@ async function handleRequest(event, context) {
     // Resolve the internal account by the server-verified Supabase UUID first.
     // Wallet identities have no email; never synthesize one or link by wallet metadata.
     let user = Object.values(db.users).find(function (u) { return isSupabaseIdentityLinked(u, supabaseUserId); });
-    if (!user && email) user = Object.values(db.users).find(function (u) { return String(u.email || '').trim().toLowerCase() === email; });
+    if (!user && email) {
+      const emailMatches = Object.values(db.users).filter(function (u) {
+        return String(u.email || '').trim().toLowerCase() === email;
+      });
+      // Never pick an arbitrary legacy account when historical data contains
+      // duplicate email addresses. Fail closed before allocating any new UID.
+      if (emailMatches.length > 1) {
+        return json({ ok: false, code: 'BTCBOX_EMAIL_ACCOUNT_AMBIGUOUS', msg: 'Multiple BTCBOX accounts match this email. Please contact support to verify the correct account.' }, 409);
+      }
+      user = emailMatches[0] || null;
+    }
     if (user && !isSupabaseIdentityLinked(user, supabaseUserId)) {
       return json({ ok: false, code: 'SUPABASE_IDENTITY_MISMATCH', msg: 'This identity is already associated with another BTCBOX account. Please contact support.' }, 409);
     }
