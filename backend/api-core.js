@@ -222,7 +222,7 @@ function validateBtcboxUsername(value) {
   return typeof value === 'string' && /^[a-z0-9][a-z0-9_]{2,23}$/.test(value);
 }
 function validateBtcboxLoginPassword(value) {
-  return typeof value === 'string' && value.length >= 12 && value.length <= 128 && !/[\x00-\x1f\x7f]/.test(value);
+  return typeof value === 'string' && value.length >= 8 && value.length <= 128 && !/[\x00-\x1f\x7f]/.test(value);
 }
 function hashBtcboxLoginPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, BTCBOX_PASSWORD_ITERATIONS, BTCBOX_PASSWORD_KEYLEN, 'sha256').toString('hex');
@@ -2040,7 +2040,7 @@ async function handleRequest(event, context) {
       return json({ ok: false, code: 'RECENT_REAUTH_REQUIRED', msg: 'Please verify a linked Google account or wallet again before resetting your password.' }, 403);
     }
     const password = typeof body.password === 'string' ? body.password : '';
-    if (!validateBtcboxLoginPassword(password)) return json({ ok: false, code: 'PASSWORD_INVALID', msg: 'Password must be 12–128 characters and cannot contain control characters.' }, 400);
+    if (!validateBtcboxLoginPassword(password)) return json({ ok: false, code: 'PASSWORD_INVALID', msg: 'Password must be 8–128 characters and cannot contain control characters.' }, 400);
     const suppliedUsername = body.username === undefined || body.username === null || body.username === ''
       ? '' : normalizeBtcboxUsername(body.username);
     if (suppliedUsername && !validateBtcboxUsername(suppliedUsername)) {
@@ -2092,7 +2092,7 @@ async function handleRequest(event, context) {
     const password = typeof body.password === 'string' ? body.password : '';
     const currentPassword = typeof body.current_password === 'string' ? body.current_password : '';
     if (!validateBtcboxUsername(username)) return json({ ok: false, code: 'USERNAME_INVALID', msg: 'Username must be 3–24 characters and use lowercase letters, numbers, or underscores.' }, 400);
-    if (!validateBtcboxLoginPassword(password)) return json({ ok: false, code: 'PASSWORD_INVALID', msg: 'Password must be 12–128 characters and cannot contain control characters.' }, 400);
+    if (!validateBtcboxLoginPassword(password)) return json({ ok: false, code: 'PASSWORD_INVALID', msg: 'Password must be 8–128 characters and cannot contain control characters.' }, 400);
     const hasCredentials = !!(user.login_password_hash && user.login_password_salt && user.login_password_algo === 'pbkdf2-sha256-600000');
     if (hasCredentials && !verifyBtcboxLoginPassword(user, currentPassword)) {
       return json({ ok: false, code: 'CURRENT_PASSWORD_INVALID', msg: 'Current BTCBOX password is incorrect.' }, 403);
