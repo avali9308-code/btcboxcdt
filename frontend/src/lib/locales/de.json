@@ -1843,5 +1843,10 @@
   "BTCBOX login password": "BTCBOX-Anmeldepasswort",
   "Your BTCBOX login password is required to start setup.": "Zum Starten der Einrichtung ist dein BTCBOX-Anmeldepasswort erforderlich.",
   "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "Melde dich innerhalb der letzten 5 Minuten vor der Einrichtung erneut an. Für Konten, die ausschließlich OAuth verwenden, ist kein zusätzliches Passwort erforderlich.",
-  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Das Ergebnis der Anfrage ist noch nicht bestätigt. Gib dein Fondspasswort erneut ein und, falls 2FA aktiviert ist, auch deinen Authenticator-Code. Versuche es anschließend mit derselben Anfrage-ID erneut."
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Das Ergebnis der Anfrage ist noch nicht bestätigt. Gib dein Fondspasswort erneut ein und, falls 2FA aktiviert ist, auch deinen Authenticator-Code. Versuche es anschließend mit derselben Anfrage-ID erneut.",
+  "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.": "Gib zur Sicherheit unten dein aktuelles Anmeldepasswort ein, um die Änderung zu bestätigen. Du musst dich nicht abmelden oder erneut anmelden.",
+  "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.": "Bei Konten, die nur Google oder eine Wallet verwenden, kann zur Bestätigung eine kürzlich erfolgte Anmeldung erforderlich sein.",
+  "Confirm current login password": "Aktuelles Anmeldepasswort bestätigen",
+  "Withdrawal request submitted. You can track its progress in withdrawal history.": "Auszahlungsantrag eingereicht. Du kannst den Status im Auszahlungsverlauf verfolgen.",
+  "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history.": "Wähle eine gespeicherte Adresse und gib den Auszahlungsbetrag ein. Den Status kannst du im Auszahlungsverlauf verfolgen."
 }
