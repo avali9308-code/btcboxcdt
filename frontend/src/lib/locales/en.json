@@ -1843,5 +1843,10 @@
   "BTCBOX login password": "BTCBOX login password",
   "Your BTCBOX login password is required to start setup.": "Your BTCBOX login password is required to start setup.",
   "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.",
-  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID."
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.",
+  "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.": "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.",
+  "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.": "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.",
+  "Confirm current login password": "Confirm current login password",
+  "Withdrawal request submitted. You can track its progress in withdrawal history.": "Withdrawal request submitted. You can track its progress in withdrawal history.",
+  "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history.": "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history."
 }
