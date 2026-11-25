@@ -6,6 +6,8 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
 const api = fs.readFileSync(path.join(root, 'backend/api-core.js'), 'utf8');
 const page = fs.readFileSync(path.join(root, 'frontend/src/features/account/FundPasswordPage.tsx'), 'utf8');
+const securityPage = fs.readFileSync(path.join(root, 'frontend/src/features/account/AccountSecurityPage.tsx'), 'utf8');
+const twoFactorCard = fs.readFileSync(path.join(root, 'frontend/src/features/account/TwoFactorCard.tsx'), 'utf8');
 
 test('fund-password changes do not require 2FA; use password or recent OAuth sign-in proof', () => {
   const start = api.indexOf("if (path === 'settings/fundpwd' && method === 'POST')");
@@ -34,4 +36,39 @@ test('withdrawal only requests a 2FA code when the account has voluntarily enabl
   assert.ok(start >= 0, 'withdrawal API route exists');
   const route = api.slice(start, start + 14000);
   assert.match(route, /if \(user\.twofa_enabled && !\/\^\\d\{6\}\$\//);
+});
+
+test('2FA enrollment uses BTCBOX local credentials for hybrid accounts, not provider presence', () => {
+  const start = api.indexOf("if (path === '2fa/enable' && method === 'POST')");
+  const end = api.indexOf("// ---------- POST /api/2fa/confirm", start);
+  assert.ok(start >= 0 && end > start, '2FA enrollment route exists');
+  const route = api.slice(start, end);
+  assert.match(route, /login_password_hash && user\.login_password_salt && user\.login_password_algo === 'pbkdf2-sha256-600000'/);
+  assert.match(route, /verifyBtcboxLoginPassword\(user, currentPassword\)/);
+  assert.match(route, /sessionAge < 0 \|\| sessionAge > 5 \* 60 \* 1000/);
+  assert.doesNotMatch(route, /user\.auth_providers/);
+});
+
+test('account security opens the real 2FA manager and refreshes account state after changes', () => {
+  assert.match(securityPage, /import \{ TwoFactorCard \} from "\.\/TwoFactorCard"/);
+  assert.match(securityPage, /<TwoFactorCard account=\{account\} onChanged=\{\(\) => \{ void refreshAccount\(\); \}\} \/>/);
+  assert.match(securityPage, /const refreshAccount = useCallback/);
+  assert.doesNotMatch(securityPage, /Enable two-factor authentication to protect your account\.\)\}\s*<Button[^>]*>\{t\("Close"\)\}/);
+});
+
+test('email sign-in password is not represented as a BTCBOX local login password', () => {
+  assert.match(securityPage, /Email sign-in password/);
+  assert.match(securityPage, /does not create or change a BTCBOX username password/);
+  assert.doesNotMatch(securityPage, /setAccount\(\(current\) => current \? \{ \.\.\.current, has_login_password: true \}/);
+});
+
+test('2FA enrollment password prompt matches the account credential type and 2FA remains optional', () => {
+  assert.match(twoFactorCard, /account\?\.has_login_password === true/);
+  assert.match(twoFactorCard, /No additional password is required for OAuth-only accounts/);
+  assert.match(twoFactorCard, /Two-factor authentication is optional/);
+});
+
+test('withdrawal retry copy does not imply 2FA is mandatory', () => {
+  const pages = fs.readFileSync(path.join(root, 'frontend/src/features/pages/Pages.tsx'), 'utf8');
+  assert.match(pages, /if 2FA is enabled, your authenticator code/);
 });
