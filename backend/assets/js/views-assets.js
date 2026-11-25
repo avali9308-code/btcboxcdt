@@ -262,7 +262,7 @@ VIEWS.deposit.afterRender = function(){
 VIEWS.withdraw = function(){
   return '<div class="va-page" style="max-width:720px;margin:0 auto">'+
     '<h1 class="page-title">Withdraw</h1>'+
-    '<p class="page-sub">Withdrawals require fund password and are reviewed manually.</p>'+
+    '<p class="page-sub">Withdrawals require your fund password and are processed after submission.</p>'+
     '<div class="va-stepper" id="wd-stepper">'+
       '<div class="va-step-h active" data-wstep="1"><div class="va-step-dot">1</div><div class="va-step-label">Info</div></div>'+
       '<div class="va-step-line" data-wline="1"></div>'+
