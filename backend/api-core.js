@@ -2334,7 +2334,7 @@ async function handleRequest(event, context) {
     const total = totalUsdt(accountBalances, livePrices);
     return json({
       ok: true,
-      uid: user.uid, email: user.email || '', username: user.username || '', has_login_password: !!user.login_password_hash,
+      uid: user.uid, email: user.email || '', username: user.username || '', has_login_password: !!(user.login_password_hash && user.login_password_salt && user.login_password_algo === 'pbkdf2-sha256-600000'),
       auth_providers: Array.isArray(user.auth_providers) ? user.auth_providers : [],
       linked_identities: (Array.isArray(user.auth_identities) ? user.auth_identities : []).map(function (item) {
         return { provider: item.provider || 'unknown', wallet_address: item.wallet_address || '', wallet_chain: item.wallet_chain || '', linked_at: item.linked_at || '' };
