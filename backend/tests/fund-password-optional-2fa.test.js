@@ -72,3 +72,17 @@ test('withdrawal retry copy does not imply 2FA is mandatory', () => {
   const pages = fs.readFileSync(path.join(root, 'frontend/src/features/pages/Pages.tsx'), 'utf8');
   assert.match(pages, /if 2FA is enabled, your authenticator code/);
 });
+
+test('fund-password page explains that local-password confirmation does not sign the user out', () => {
+  assert.match(page, /You do not need to sign out or sign in again/);
+  assert.match(page, /a recent sign-in may be required/);
+  assert.match(page, /Confirm current login password/);
+});
+
+test('withdrawal customer copy does not expose staff review or manual payout workflow', () => {
+  const pages = fs.readFileSync(path.join(root, 'frontend/src/features/pages/Pages.tsx'), 'utf8');
+  assert.match(pages, /Choose a saved address and enter the amount you want to withdraw/);
+  assert.match(pages, /Withdrawal request submitted\. You can track its progress in withdrawal history/);
+  assert.match(pages, /t\("Submit withdrawal"\)/);
+  assert.doesNotMatch(pages, /Submit for staff review|Withdrawal submitted for staff review|staff review and manually pay approved requests/);
+});
