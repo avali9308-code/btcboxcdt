@@ -105,6 +105,8 @@ test('email registration, password setup and recovery use an 8-character minimum
   assert.match(auth, /const completePasswordRecovery = useCallback\(async \(password: string\) => \{\s*if \(password\.length < 8 \|\| password\.length > 128\)/);
   assert.match(auth, /resetPasswordForEmail\(address\.trim\(\)/);
   assert.match(auth, /flow=recovery/);
+  assert.match(auth, /Array\.isArray\(data\.user\.identities\) && data\.user\.identities\.length === 0/);
+  assert.match(auth, /use Forgot password to set your email password/);
 });
 
 
