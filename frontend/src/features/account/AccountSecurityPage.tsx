@@ -166,7 +166,7 @@ export function AccountSecurityPage() {
               <span className="text-sm font-medium text-brand-text">{t("Email sign-in password")}</span>
             </span>
             <span className="flex items-center gap-1.5 text-xs">
-              <span className="text-brand-text-muted">{account?.has_login_password ? t("Set") : t("Not set")}</span>
+              <span className="text-brand-text-muted">{email ? t("Email account") : t("Unavailable")}</span>
               <ChevronRight className="h-4 w-4 text-brand-text-muted" />
             </span>
           </button>
