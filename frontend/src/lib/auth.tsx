@@ -532,6 +532,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (authError) throw authError;
       if (!data.user) throw new Error("Registration could not be confirmed. Please try again.");
+      // Supabase deliberately returns an obfuscated user with no identities for
+      // an email that already exists. Do not present that as a fresh registration;
+      // guide passwordless legacy users to sign in or use the recovery link instead.
+      if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setNotice("If this email already has a BTCBOX account, sign in or use Forgot password to set your email password.");
+        return;
+      }
       if (data.session?.access_token) {
         await acceptSupabaseSession(data.session.access_token);
         setNotice("Your BTCBOX account is ready. You can sign in with your email and password or continue with Google.");
