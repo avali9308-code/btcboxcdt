@@ -106,3 +106,21 @@ test('email registration, password setup and recovery use an 8-character minimum
   assert.match(auth, /resetPasswordForEmail\(address\.trim\(\)/);
   assert.match(auth, /flow=recovery/);
 });
+
+
+
+test('Supabase email sign-in reuses the existing BTCBOX UID and rejects email identity collisions before allocating a new UID', () => {
+  const start = api.indexOf("// ---------- POST /api/supabase-login");
+  const end = api.indexOf("// ---------- POST /api/logout", start);
+  assert.ok(start >= 0 && end > start, 'Supabase login route exists');
+  const route = api.slice(start, end);
+  const bySupabaseId = route.indexOf("Object.values(db.users).find(function (u) { return isSupabaseIdentityLinked(u, supabaseUserId); })");
+  const byEmail = route.indexOf("if (!user && email) user = Object.values(db.users).find");
+  const mismatch = route.indexOf("SUPABASE_IDENTITY_MISMATCH");
+  const allocate = route.indexOf("const uid = String(db.next_uid++)");
+  assert.ok(bySupabaseId >= 0 && byEmail > bySupabaseId, 'existing account is resolved by stable Supabase ID before email fallback');
+  assert.ok(mismatch > byEmail && allocate > mismatch, 'email-to-different-Supabase-ID collision is rejected before new UID allocation');
+  assert.match(route, /return json\(\{ ok: false, code: 'SUPABASE_IDENTITY_MISMATCH'/);
+  assert.match(route, /db\.users\[uid\] = user/);
+  assert.match(route, /db\.sessions\[token\] = \{ uid: user\.uid/);
+});
