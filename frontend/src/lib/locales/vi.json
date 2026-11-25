@@ -1843,5 +1843,10 @@
   "BTCBOX login password": "Mật khẩu đăng nhập BTCBOX",
   "Your BTCBOX login password is required to start setup.": "Cần mật khẩu đăng nhập BTCBOX để bắt đầu thiết lập.",
   "Sign in again within 5 minutes before enrolling. No additional password is required for OAuth-only accounts.": "Đăng nhập lại trong vòng 5 phút trước khi thiết lập. Tài khoản chỉ dùng OAuth không cần mật khẩu bổ sung.",
-  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Kết quả yêu cầu chưa được xác nhận. Nhập lại mật khẩu quỹ và mã xác thực nếu đã bật 2FA, sau đó thử lại với cùng ID yêu cầu."
+  "Request result is not yet confirmed. Re-enter your fund password and, if 2FA is enabled, your authenticator code, then retry with the same request ID.": "Kết quả yêu cầu chưa được xác nhận. Nhập lại mật khẩu quỹ và mã xác thực nếu đã bật 2FA, sau đó thử lại với cùng ID yêu cầu.",
+  "For your security, enter your current login password below to confirm this change. You do not need to sign out or sign in again.": "Để bảo mật, hãy nhập mật khẩu đăng nhập hiện tại bên dưới để xác nhận thay đổi. Bạn không cần đăng xuất hoặc đăng nhập lại.",
+  "For accounts using only Google or a wallet, a recent sign-in may be required to confirm this change.": "Tài khoản chỉ sử dụng Google hoặc ví có thể cần đăng nhập gần đây để xác nhận thay đổi này.",
+  "Confirm current login password": "Xác nhận mật khẩu đăng nhập hiện tại",
+  "Withdrawal request submitted. You can track its progress in withdrawal history.": "Đã gửi yêu cầu rút tiền. Bạn có thể theo dõi tiến độ trong lịch sử rút tiền.",
+  "Choose a saved address and enter the amount you want to withdraw. You can track the request status in withdrawal history.": "Chọn địa chỉ đã lưu và nhập số tiền muốn rút. Bạn có thể theo dõi trạng thái yêu cầu trong lịch sử rút tiền."
 }
