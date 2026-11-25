@@ -318,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Set a password on the currently authenticated Supabase user. This keeps the
   // Google identity and email/password credential on the same auth.users UUID.
   const setSupabaseLoginPassword = useCallback(async (password: string) => {
+    if (password.length < 8 || password.length > 128) throw new Error("Use a password between 8 and 128 characters.");
     setBusy(true); setError(""); setNotice("");
     try {
       const client = clientRef.current;
@@ -517,6 +518,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [acceptSupabaseSession]);
 
   const signUpWithEmail = useCallback(async (address: string, password: string) => {
+    if (password.length < 8 || password.length > 128) throw new Error("Use a password between 8 and 128 characters.");
     setBusy(true); setError(""); setNotice("");
     try {
       const client = clientRef.current;
@@ -556,6 +558,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const completePasswordRecovery = useCallback(async (password: string) => {
+    if (password.length < 8 || password.length > 128) throw new Error("Use a password between 8 and 128 characters.");
     setBusy(true); setError(""); setNotice("");
     try {
       if (!clientRef.current) throw new Error("Authentication is unavailable. Please reload and try again.");
