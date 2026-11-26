@@ -4,7 +4,7 @@ import { multiplyDecimalStrings, multiplyDecimalStringsCeil, addDecimalStrings, 
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { RefreshCw, TrendingUp, TrendingDown, Clock3, ShieldAlert, ArrowLeft, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight, KeyRound, Copy, Check, Plus, Minus, History, WifiOff, Search } from "lucide-react";
-import { ApiError, getAccount, getOrders, getMarkets, getSpotMarketPairs, getKlines, getOrderBook, getUsdtUsdRate, getTradingStatus, submitSpotOrder, cancelSpotOrder, getDepositAddress, getSavedCryptoAddresses, getWithdrawalConfig, getWithdrawalHistoryPage, submitWithdrawal, getEarnCatalog, submitEarnAction, getSupportUnread, type EarnProduct, type EarnPosition, type SavedCryptoAddress, type AccountBalance, type AccountSnapshot, type DepositRecord, type OrderRecord, type MarketTicker, type SpotMarketPair, type MarketCandle, type OrderBookSnapshot, type TradingStatus, type WithdrawalConfig, type WithdrawalRecord, submitKyc } from "../../lib/api";
+import { ApiError, getAccount, getOrders, getMarkets, getSpotMarketPairs, getKlines, getOrderBook, getUsdtUsdRate, getTradingStatus, submitSpotOrder, cancelSpotOrder, getDepositAddress, getSavedCryptoAddresses, getWithdrawalConfig, getWithdrawalHistoryPage, submitWithdrawal, getInternalConversionQuote, submitInternalConversion, getEarnCatalog, submitEarnAction, getSupportUnread, type EarnProduct, type EarnPosition, type SavedCryptoAddress, type AccountBalance, type AccountSnapshot, type DepositRecord, type OrderRecord, type MarketTicker, type SpotMarketPair, type MarketCandle, type OrderBookSnapshot, type TradingStatus, type WithdrawalConfig, type WithdrawalRecord, submitKyc } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { DEV_ACCOUNT_PLACEHOLDER, DEV_OPEN_ACCOUNT_PAGES } from "../../lib/devAccess";
 import { useAuthDialog } from "../../lib/auth-dialog";
@@ -1288,6 +1288,100 @@ export function DepositPage(){
  </PageFrame>;
 }
 
+
+/**
+ * Converts assets using a short-lived server-signed market quote and the
+ * PostgreSQL atomic double-entry ledger. No client-side balance mutation.
+ */
+export function InternalConversionPage(){
+ const {t,language}=useI18n();
+ const [account,setAccount]=useState<AccountSnapshot|null>(null);
+ const [fromAsset,setFromAsset]=useState("USDT");
+ const [toAsset,setToAsset]=useState("BTC");
+ const [amount,setAmount]=useState("");
+ const [quote,setQuote]=useState<Awaited<ReturnType<typeof getInternalConversionQuote>>|null>(null);
+ const [loading,setLoading]=useState(true);
+ const [quoting,setQuoting]=useState(false);
+ const [submitting,setSubmitting]=useState(false);
+ const [error,setError]=useState("");
+ const [message,setMessage]=useState("");
+ const [requestId,setRequestId]=useState("");
+ const [reload,setReload]=useState(0);
+ useEffect(()=>{
+  const controller=new AbortController();
+  setLoading(true);setError("");
+  getAccount(controller.signal).then(snapshot=>{
+   if(controller.signal.aborted)return;
+   setAccount(snapshot);
+   const assets=Object.keys(snapshot.balances||{}).sort();
+   setFromAsset(current=>assets.includes(current)?current:(assets.includes("USDT")?"USDT":assets[0]||"USDT"));
+   setToAsset(current=>assets.includes(current)&&current!==fromAsset?current:(assets.find(asset=>asset!==fromAsset)||"BTC"));
+  }).catch(reason=>{
+   if(reason instanceof Error&&reason.name==="AbortError")return;
+   if(!controller.signal.aborted)setError(localizedFailure(reason,"Account data is temporarily unavailable."));
+  }).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+  return ()=>controller.abort();
+ },[reload]);
+ const assets=Object.keys(account?.balances||{}).sort();
+ const fromBalance=account?.balances?.[fromAsset]?.free??"0";
+ const toBalance=account?.balances?.[toAsset]?.free??"0";
+ const resetQuote=()=>{setQuote(null);setRequestId("");setError("");setMessage("");};
+ const getQuote=async()=>{
+  if(!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset)return;
+  setQuoting(true);setError("");setMessage("");setQuote(null);setRequestId("");
+  try{
+   const next=await getInternalConversionQuote(fromAsset,toAsset,amount.trim());
+   setQuote(next);
+   setRequestId(window.crypto.randomUUID());
+  }catch(reason){setError(localizedFailure(reason,"Live conversion prices are temporarily unavailable."));}
+  finally{setQuoting(false);}
+ };
+ const swapAssets=()=>{const previous=fromAsset;setFromAsset(toAsset);setToAsset(previous);resetQuote();};
+ const confirm=async()=>{
+  if(!quote||!requestId||submitting)return;
+  if(quote.expires_at<=Date.now()){setQuote(null);setRequestId("");setError("The conversion quote has expired. Request a new quote.");return;}
+  setSubmitting(true);setError("");setMessage("");
+  try{
+   const result=await submitInternalConversion({request_id:requestId,quote_token:quote.quote_token});
+   setMessage(result.duplicate?"This conversion was already processed.":"Conversion completed.");
+   setQuote(null);setRequestId("");setAmount("");
+   setReload(value=>value+1);
+  }catch(reason){setError(localizedFailure(reason,"Conversion result is unconfirmed. Refresh your balances and check operation history before retrying."));}
+  finally{setSubmitting(false);}
+ };
+ const quoteExpired=!!quote&&quote.expires_at<=Date.now();
+ return <PageFrame title="Convert" tone="assets" backTo="/assets" className="funds-flow-page">
+  <div className="mx-auto w-full max-w-2xl space-y-5">
+   {loading?<Card className="border-brand-border bg-brand-surface"><CardContent className="p-5 text-sm text-brand-text-muted" role="status">{t("Loading wallet balances…")}</CardContent></Card>
+   :!account?<Card className="border-brand-border bg-brand-surface"><CardContent className="p-5 text-sm text-brand-text-muted">{t("Account data is temporarily unavailable.")}</CardContent></Card>
+   :<Card className="border border-white/[0.08] bg-brand-surface">
+    <CardHeader className="border-b border-brand-border"><CardTitle>{t("Convert assets")}</CardTitle><CardDescription>{t("Convert between supported assets at a live market rate.")}</CardDescription></CardHeader>
+    <CardContent className="space-y-4 p-4 sm:p-6">
+     <div className="space-y-2 rounded-xl border border-brand-border bg-brand-surface-2/50 p-4">
+      <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("From")}</span><select value={fromAsset} onChange={event=>{setFromAsset(event.target.value);resetQuote();}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface px-3 text-sm text-brand-text">{assets.map(asset=><option key={asset} value={asset}>{asset}</option>)}</select></label>
+      <div className="flex items-center justify-between text-xs text-brand-text-muted"><span>{t("Available balance")}</span><span className="font-mono tabular-nums">{formatDecimalAmount(fromBalance,localeTags[language])} {fromAsset}</span></div>
+      <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Amount")}</span><input inputMode="decimal" value={amount} onChange={event=>{setAmount(event.target.value);resetQuote();}} placeholder="0.00" className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent/60" /></label>
+     </div>
+     <div className="flex justify-center"><Button type="button" variant="outline" size="icon" aria-label={t("Swap assets")} onClick={swapAssets} disabled={submitting}><ArrowLeftRight className="h-4 w-4"/></Button></div>
+     <div className="space-y-2 rounded-xl border border-brand-border bg-brand-surface-2/50 p-4">
+      <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("To")}</span><select value={toAsset} onChange={event=>{setToAsset(event.target.value);resetQuote();}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface px-3 text-sm text-brand-text">{assets.filter(asset=>asset!==fromAsset).map(asset=><option key={asset} value={asset}>{asset}</option>)}</select></label>
+      <div className="flex items-center justify-between text-xs text-brand-text-muted"><span>{t("Current balance")}</span><span className="font-mono tabular-nums">{formatDecimalAmount(toBalance,localeTags[language])} {toAsset}</span></div>
+     </div>
+     {quote?<div className="space-y-2 rounded-xl border border-brand-accent/25 bg-brand-accent/[0.04] p-4" aria-live="polite">
+      <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("Exchange rate")}</span><span className="font-mono tabular-nums">1 {fromAsset} = {quote.rate} {toAsset}</span></div>
+      <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("You will receive")}</span><strong className="font-mono tabular-nums">{formatDecimalAmount(quote.to_amount,localeTags[language])} {toAsset}</strong></div>
+      <p className="text-xs text-brand-text-muted">{t("Quote valid for 30 seconds. The rate is locked until expiry.")}</p>
+     </div>:null}
+     {error?<p className="text-sm text-brand-danger" role="alert">{t(error)}</p>:null}
+     {message?<p className="text-sm text-brand-success" role="status">{t(message)}</p>:null}
+     {!quote?<Button type="button" block className="min-h-12" disabled={quoting||submitting||!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset||compareDecimalStrings(amount,"0")!==1||compareDecimalStrings(amount,fromBalance)===1} onClick={getQuote}>{quoting?t("Loading…"):t("Get quote")}</Button>
+      :<Button type="button" block className="min-h-12" disabled={submitting||quoting||quoteExpired} onClick={confirm}>{submitting?t("Processing…"):t("Confirm conversion")}</Button>}
+     <p className="text-xs leading-5 text-brand-text-muted">{t("Conversions are final once confirmed. Check the assets and amount before proceeding.")}</p>
+    </CardContent>
+   </Card>}
+  </div>
+ </PageFrame>;
+}
 
 /**
  * Displays Earn products and the user's positions with their available actions.
