@@ -24,7 +24,7 @@ const routes = [
   { path: "/orders", heading: "Orders" },
   { path: "/deposit", heading: "Deposit" },
   { path: "/withdraw", heading: "Withdraw" },
-  { path: "/convert", heading: "Convert assets" },
+  { path: "/convert", heading: "Convert" },
   { path: "/earn", heading: "Earn" },
   { path: "/kyc", heading: "Identity verification" },
   { path: "/rewards", heading: "Rewards & referrals" },
