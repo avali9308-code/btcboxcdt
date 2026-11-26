@@ -17,6 +17,7 @@ const routes = [
   { path: "/trade/BTCUSDT", heading: "BTCUSDT" },
   { path: "/trade-hub", heading: "Choose your trading mode" },
   { path: "/assets", heading: "Assets" },
+  { path: "/funds", heading: "Funds" },
   { path: "/me", heading: "My account" },
   { path: "/settings", heading: "Security settings" },
   { path: "/support", heading: "Customer support" },
@@ -277,7 +278,7 @@ async function assertPageAtWidth(
     await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible({ timeout: 15000 });
   }
 
-  if (["/home", "/markets", "/trade/BTCUSDT", "/assets", "/me"].includes(route.path)) {
+  if (["/home", "/markets", "/trade/BTCUSDT", "/assets", "/funds", "/me"].includes(route.path)) {
     const mobileNavigation = page.locator(".bf-bottom-nav");
     const desktopProducts = page.locator('header nav[aria-label="Trade products"]');
     const desktopAssets = page.locator('header:has(nav[aria-label="Trade products"]) a[href="/assets"][aria-label="Assets"]');
@@ -294,7 +295,7 @@ async function assertPageAtWidth(
   // Standalone history pages intentionally use their own compact secondary
   // navigation instead of the application shell. Only shell routes own the
   // BTCBOX home logo.
-  if (["/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/me", "/settings", "/support", "/deposit", "/withdraw", "/earn", "/kyc", "/contract", "/seconds"].includes(route.path) && width <= 480) {
+  if (["/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/funds", "/me", "/settings", "/support", "/deposit", "/withdraw", "/earn", "/kyc", "/contract", "/seconds"].includes(route.path) && width <= 480) {
     await expect(
       page.getByRole("link", { name: "BTCBOX home" }).getByRole("img", { name: "BTCBOX" }),
     ).toBeVisible();
