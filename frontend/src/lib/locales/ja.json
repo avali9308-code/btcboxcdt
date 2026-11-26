@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "この資産の出金アドレスは保存されていません",
   "No saved withdrawal address for this asset.": "この資産の保存済み出金アドレスはありません。",
   "Add withdrawal address": "出金アドレスを追加",
-  "No available withdrawal asset. Please contact support.": "出金可能な資産がありません。サポートにお問い合わせください。"
+  "No available withdrawal asset. Please contact support.": "出金可能な資産がありません。サポートにお問い合わせください。",
+  "This conversion quote has already been used. Request a new quote.": "この交換見積もりはすでに使用されています。新しい見積もりを取得してください。"
 }
