@@ -1491,6 +1491,8 @@ export function WithdrawPage(){
   return config.fees[item.coin]!==undefined&&config.allowed_networks[item.coin]?.includes(item.network)===true;
  });
  const selectedAddress=usableAddresses.find(item=>item.id===selectedId)??null;
+ const withdrawalCoins=[...new Set(usableAddresses.map(item=>item.coin))];
+ const selectedCoinAddresses=selectedAddress?usableAddresses.filter(item=>item.coin===selectedAddress.coin):[];
  const settlementCoin=selectedAddress?.coin==="USDC"?"USDT":selectedAddress?.coin;
  const balance=settlementCoin&&account?.balances?(account.balances[settlementCoin]??{free:"0",frozen:"0"}):undefined;
  const feeValue=selectedAddress&&config?config.fees?.[selectedAddress.coin]:undefined;
@@ -1572,14 +1574,20 @@ export function WithdrawPage(){
 <Card aria-busy={submitting} className="relative overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"><span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-brand-surface"/><CardHeader className="border-b border-brand-border bg-brand-surface"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><ArrowUpRight className="h-5 w-5"/></span><div className="min-w-0"><CardTitle>{t("Submit withdrawal")}</CardTitle><Link to="/address-book" className="mt-2 inline-flex min-h-9 items-center text-sm font-medium text-brand-accent hover:underline">{t("Saved crypto addresses")}</Link></div></div></CardHeader><CardContent className="p-4 sm:p-6">
     {usableAddresses.length===0?<div className="rounded-xl border border-dashed border-brand-border p-5 text-sm text-brand-text-muted">{t("No available withdrawal address. Add one to continue.")}</div>
     :<form aria-busy={submitting} className="space-y-4" onSubmit={submit}>
+     <label className="block space-y-1.5 text-sm">
+      <span className="text-brand-text-muted">{t("Asset")}</span>
+      <select aria-label={t("Asset")} value={selectedAddress?.coin??""} disabled={!!pendingIntent||pendingIntentInvalid||submitting||withdrawalCoins.length===0} onChange={event=>{const next=event.target.value;const first=usableAddresses.find(item=>item.coin===next);if(first){setAmount("");setSelectedId(first.id);setAddressPickerOpen(false);setError("");}}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15 disabled:opacity-60">
+       {withdrawalCoins.map(coin=><option key={coin} value={coin}>{coin}</option>)}
+      </select>
+     </label>
      <div className="space-y-1.5 text-sm">
-      <span className="text-brand-text-muted">{t("Withdrawal address")}</span>
+      <span className="text-brand-text-muted">{t("Withdrawal address")} · {selectedAddress?.coin??""}</span>
       <button type="button" disabled={!!pendingIntent||pendingIntentInvalid||submitting} aria-expanded={addressPickerOpen} aria-controls="withdraw-address-options" onClick={()=>setAddressPickerOpen(value=>!value)} className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-left text-sm text-brand-text outline-none transition-colors hover:border-brand-accent/50 focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15 disabled:cursor-not-allowed disabled:opacity-60">
        <span className="min-w-0">{selectedAddress?<><span className="block font-medium">{selectedAddress.coin} · {selectedAddress.network}</span><span className="mt-0.5 block truncate font-mono text-xs text-brand-text-muted">{selectedAddress.address}</span></>:<span className="text-brand-text-muted">{t("Select")}</span>}</span>
        <ChevronDown className={`h-4 w-4 shrink-0 text-brand-text-muted transition-transform ${addressPickerOpen?"rotate-180":""}`} aria-hidden="true"/>
       </button>
       {addressPickerOpen?<div id="withdraw-address-options" role="group" aria-label={t("Withdrawal address")} className="max-h-64 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-brand-border bg-brand-surface p-2 shadow-lg">
-       {usableAddresses.map(item=><button key={item.id} type="button" aria-pressed={item.id===selectedId} onClick={()=>{if(item.id!==selectedId)setAmount("");setSelectedId(item.id);setAddressPickerOpen(false);setError("");}} className={`flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-brand-surface-2 focus:bg-brand-surface-2 focus:outline-none ${item.id===selectedId?"bg-brand-accent/10 ring-1 ring-brand-accent/30":""}`}>
+       {selectedCoinAddresses.map(item=><button key={item.id} type="button" aria-pressed={item.id===selectedId} onClick={()=>{if(item.id!==selectedId)setAmount("");setSelectedId(item.id);setAddressPickerOpen(false);setError("");}} className={`flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-brand-surface-2 focus:bg-brand-surface-2 focus:outline-none ${item.id===selectedId?"bg-brand-accent/10 ring-1 ring-brand-accent/30":""}`}>
         <span className="min-w-0"><span className="block font-medium text-brand-text">{item.coin} · {item.network}</span><span className="mt-0.5 block truncate font-mono text-xs text-brand-text-muted">{item.address}</span></span>
         {item.id===selectedId?<Check className="h-4 w-4 shrink-0 text-brand-accent" aria-hidden="true"/>:null}
        </button>)}
