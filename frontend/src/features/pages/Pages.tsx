@@ -1374,7 +1374,7 @@ export function InternalConversionPage(){
      </div>:null}
      {error?<p className="text-sm text-brand-danger" role="alert">{t(error)}</p>:null}
      {message?<p className="text-sm text-brand-success" role="status">{t(message)}</p>:null}
-     {!quote?<Button type="button" block className="min-h-12" disabled={quoting||submitting||!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset||compareDecimalStrings(amount,"0")!==1||compareDecimalStrings(amount,fromBalance)===1} onClick={getQuote}>{quoting?t("Loading…"):t("Get quote")}</Button>
+     {!quote?<Button type="button" block className="min-h-12" disabled={quoting||submitting||!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset||compareDecimalStrings(amount,"0")!==1||compareDecimalStrings(amount,String(fromBalance))===1} onClick={getQuote}>{quoting?t("Loading…"):t("Get quote")}</Button>
       :<Button type="button" block className="min-h-12" disabled={submitting||quoting||quoteExpired} onClick={confirm}>{submitting?t("Processing…"):t("Confirm conversion")}</Button>}
      <p className="text-xs leading-5 text-brand-text-muted">{t("Conversions are final once confirmed. Check the assets and amount before proceeding.")}</p>
     </CardContent>
