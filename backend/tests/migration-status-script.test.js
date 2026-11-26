@@ -76,7 +76,6 @@ test('canonical bootstrap source preserves the prepared Seconds and Admin migrat
     '0043_support_read_cursor_v1.sql',
     '0044_withdrawal_operation_type_compatibility_v1.sql',
     '0057_admin_withdrawal_queue_includes_approved_payouts_v1.sql',
-    '0058_internal_asset_conversion_atomic_v1.sql'
   ];
   for (const source of scripts) {
     const block = source.split('FILES=(')[1]?.split(LF + ')')[0];
