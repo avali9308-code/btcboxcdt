@@ -1889,5 +1889,13 @@
   "No saved withdrawal address for this asset.": "No saved withdrawal address for this asset.",
   "Add withdrawal address": "Add withdrawal address",
   "No available withdrawal asset. Please contact support.": "No available withdrawal asset. Please contact support.",
-  "This conversion quote has already been used. Request a new quote.": "This conversion quote has already been used. Request a new quote."
+  "This conversion quote has already been used. Request a new quote.": "This conversion quote has already been used. Request a new quote.",
+  "Conversion fee": "Conversion fee",
+  "Internal conversion is not available yet. No assets were moved.": "Internal conversion is not available yet. No assets were moved.",
+  "One of the selected assets is not enabled for conversion.": "One of the selected assets is not enabled for conversion.",
+  "The amount exceeds the source asset precision.": "The amount exceeds the source asset precision.",
+  "The converted amount is below the supported precision.": "The converted amount is below the supported precision.",
+  "Insufficient available balance. No conversion was made.": "Insufficient available balance. No conversion was made.",
+  "This request ID was already used for a different conversion.": "This request ID was already used for a different conversion.",
+  "The conversion was not confirmed. Check your asset balances before retrying.": "The conversion was not confirmed. Check your asset balances before retrying."
 }
