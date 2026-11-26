@@ -1024,10 +1024,18 @@ test("assets list can scroll its final row fully above the fixed mobile navigati
   const rows = list.locator(":scope > div > div");
   await expect(rows).toHaveCount(symbols.length);
   await rows.last().scrollIntoViewIfNeeded();
+  // Scroll the main content only far enough to clear the fixed navigation.
+  // Do not jump to the document's absolute end: the site footer follows the
+  // asset list, so that would scroll the final asset row back above the viewport.
   await page.evaluate(() => {
     const main = document.querySelector("main");
-    if (main) main.scrollTop = main.scrollHeight;
-    document.scrollingElement?.scrollTo(0, document.scrollingElement.scrollHeight);
+    const row = document.querySelector('[data-testid="asset-balance-list"] > div > div:last-child');
+    const nav = document.querySelector(".bf-bottom-nav");
+    if (!main || !row || !nav) return;
+    const rowBox = row.getBoundingClientRect();
+    const navBox = nav.getBoundingClientRect();
+    const clearance = rowBox.bottom - navBox.top + 8;
+    if (clearance > 0) main.scrollTop += clearance;
   });
   await expect.poll(async () => {
     const row = await rows.last().boundingBox();
