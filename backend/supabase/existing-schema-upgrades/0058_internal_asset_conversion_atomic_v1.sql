@@ -25,47 +25,40 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Expected financial operation constraint is missing; inspect the live schema before applying';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conrelid='public.financial_operations'::regclass
-      AND conname='financial_operations_operation_type_check'
-      AND pg_get_constraintdef(oid) LIKE '%perp_bad_debt%'
-      AND pg_get_constraintdef(oid) LIKE '%perp_funding%'
-      AND pg_get_constraintdef(oid) LIKE '%migration_opening_balance%'
-  ) THEN
-    RAISE EXCEPTION 'Live financial operation allowlist differs from the reviewed BTCBOX schema; stop and reconcile before applying';
-  END IF;
 END;
 $preflight$;
 
--- Existing rows are not rewritten. NOT VALID avoids a full-table scan while
--- immediately enforcing the expanded allowlist for newly inserted operations.
+-- Preserve the exact live allowlist instead of copying a possibly stale list
+-- from an older migration. Only the new operation type is added.
 DO $constraint$
+DECLARE
+  v_existing_expression text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conrelid='public.financial_operations'::regclass
-      AND conname='financial_operations_operation_type_check_v2'
-  ) THEN
-    ALTER TABLE public.financial_operations
-      ADD CONSTRAINT financial_operations_operation_type_check_v2
-      CHECK (operation_type IN (
-        'deposit_credit','withdraw_freeze','withdraw_approve','withdraw_reject',
-        'withdraw_settle','withdraw_paid','earn_subscribe','earn_redeem',
-        'admin_adjustment','spot_trade','spot_order_reserve','spot_order_cancel',
-        'seconds_open','seconds_settle','migration_opening_balance',
-        'perp_order_reserve','perp_trade','perp_order_cancel','perp_funding',
-        'perp_liquidation','perp_insurance_cover','perp_bad_debt',
-        'asset_conversion'
-      )) NOT VALID;
+  SELECT pg_get_expr(conbin, conrelid)
+    INTO v_existing_expression
+  FROM pg_constraint
+  WHERE conrelid='public.financial_operations'::regclass
+    AND conname='financial_operations_operation_type_check'
+    AND contype='c';
+
+  IF v_existing_expression IS NULL THEN
+    RAISE EXCEPTION 'Could not read the live financial operation allowlist; no changes applied';
   END IF;
-  ALTER TABLE public.financial_operations
-    DROP CONSTRAINT IF EXISTS financial_operations_operation_type_check;
-  ALTER TABLE public.financial_operations
-    RENAME CONSTRAINT financial_operations_operation_type_check_v2
-    TO financial_operations_operation_type_check;
-  ALTER TABLE public.financial_operations
-    VALIDATE CONSTRAINT financial_operations_operation_type_check;
+
+  IF position('asset_conversion' in v_existing_expression) = 0 THEN
+    EXECUTE format(
+      'ALTER TABLE public.financial_operations ADD CONSTRAINT financial_operations_operation_type_check_v2 CHECK ((%s) OR operation_type = %L) NOT VALID',
+      v_existing_expression,
+      'asset_conversion'
+    );
+    ALTER TABLE public.financial_operations
+      DROP CONSTRAINT financial_operations_operation_type_check;
+    ALTER TABLE public.financial_operations
+      RENAME CONSTRAINT financial_operations_operation_type_check_v2
+      TO financial_operations_operation_type_check;
+    ALTER TABLE public.financial_operations
+      VALIDATE CONSTRAINT financial_operations_operation_type_check;
+  END IF;
 END;
 $constraint$;
 
