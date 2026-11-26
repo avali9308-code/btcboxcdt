@@ -1370,7 +1370,8 @@ export function InternalConversionPage(){
      </div>
      {quote?<div className="space-y-2 rounded-xl border border-brand-accent/25 bg-brand-accent/[0.04] p-4" aria-live="polite">
       <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("Exchange rate")}</span><span className="font-mono tabular-nums">1 {fromAsset} = {quote.rate} {toAsset}</span></div>
-      <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("You will receive")}</span><strong className="font-mono tabular-nums">{formatDecimalAmount(quote.to_amount,localeTags[language])} {toAsset}</strong></div>\n      <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("Conversion fee")}</span><span className="font-mono tabular-nums">0 {fromAsset}</span></div>
+      <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("You will receive")}</span><strong className="font-mono tabular-nums">{formatDecimalAmount(quote.to_amount,localeTags[language])} {toAsset}</strong></div>
+      <div className="flex items-center justify-between gap-3 text-sm"><span className="text-brand-text-muted">{t("Conversion fee")}</span><span className="font-mono tabular-nums">0 {fromAsset}</span></div>
       <p className="text-xs text-brand-text-muted">{t("Quote valid for 30 seconds. The rate is locked until expiry.")}</p>
      </div>:null}
      {error?<p className="text-sm text-brand-danger" role="alert">{t(error)}</p>:null}
