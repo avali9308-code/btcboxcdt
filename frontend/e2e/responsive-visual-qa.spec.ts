@@ -17,6 +17,7 @@ const routes = [
   { path: "/trade/BTCUSDT", heading: "BTCUSDT" },
   { path: "/trade-hub", heading: "Choose your trading mode" },
   { path: "/assets", heading: "Assets" },
+  { path: "/funds", heading: "Funds" },
   { path: "/me", heading: "My account" },
   { path: "/settings", heading: "Security settings" },
   { path: "/support", heading: "Customer support" },
@@ -371,7 +372,7 @@ async function assertPageAtWidth(
     ).toBeVisible();
   }
 
-  if (["/deposit", "/withdraw"].includes(route.path)) {
+  if (["/funds", "/deposit", "/withdraw"].includes(route.path)) {
     await expect(page.locator(".bf-bottom-nav"), "Funds workflows must hide the global mobile tab bar.").toBeHidden();
     await expect(page.getByRole("link", { name: "BTCBOX home" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Back" })).toBeVisible();
@@ -887,7 +888,13 @@ test("deposit and withdrawal workflows render usable states", async ({ page, con
   await page.setViewportSize({ width: 390, height: 844 });
   await installVisualApiMocks(page);
 
-  await page.goto("/deposit", { waitUntil: "domcontentloaded" });
+  await page.goto("/assets", { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Deposit / Withdraw" }).click();
+  await expect(page).toHaveURL(/\\/funds$/);
+  await expect(page.getByRole("heading", { name: "Funds" })).toBeVisible();
+  await page.getByRole("link", { name: /Deposit Deposit address/ }).click();
+  await expect(page).toHaveURL(/\\/deposit$/);
+  await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
   await expect(page.getByLabel("Asset")).toHaveValue("USDT");
   await expect(page.getByLabel("Network")).toHaveValue("TRC20");
@@ -897,7 +904,10 @@ test("deposit and withdrawal workflows render usable states", async ({ page, con
   await copyButton.click();
   await expect(page.getByRole("status").filter({ hasText: "Deposit address copied." })).toBeVisible();
 
-  await page.goto("/withdraw", { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\\/funds$/);
+  await page.getByRole("link", { name: /Withdraw Submit withdrawal/ }).click();
+  await expect(page).toHaveURL(/\\/withdraw$/);
   await expect(page.getByRole("heading", { name: "Withdraw" })).toBeVisible();
   await expect(page.getByLabel("Withdrawal address")).toBeVisible();
   await expect(page.getByText("Selected destination: USDT · TRC20")).toBeVisible();
