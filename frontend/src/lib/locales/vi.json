@@ -1884,5 +1884,9 @@
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "Chưa xác nhận được kết quả. Hãy làm mới số dư và kiểm tra lịch sử trước khi thử lại.",
   "Conversion completed.": "Đã chuyển đổi thành công.",
   "This conversion was already processed.": "Yêu cầu chuyển đổi này đã được xử lý.",
-  "Loading wallet balances…": "Đang tải số dư ví…"
+  "Loading wallet balances…": "Đang tải số dư ví…",
+  "No address saved for this asset": "Chưa lưu địa chỉ rút tiền cho tài sản này",
+  "No saved withdrawal address for this asset.": "Chưa có địa chỉ rút tiền được lưu cho tài sản này.",
+  "Add withdrawal address": "Thêm địa chỉ rút tiền",
+  "No available withdrawal asset. Please contact support.": "Hiện không có tài sản nào hỗ trợ rút tiền. Vui lòng liên hệ hỗ trợ."
 }
