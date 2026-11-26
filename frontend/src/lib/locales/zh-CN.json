@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "该币种尚未保存提现地址",
   "No saved withdrawal address for this asset.": "该币种暂无已保存的提现地址。",
   "Add withdrawal address": "添加提现地址",
-  "No available withdrawal asset. Please contact support.": "当前没有可用的提现币种，请联系客服。"
+  "No available withdrawal asset. Please contact support.": "当前没有可用的提现币种，请联系客服。",
+  "This conversion quote has already been used. Request a new quote.": "此兑换报价已使用，请重新获取报价。"
 }
