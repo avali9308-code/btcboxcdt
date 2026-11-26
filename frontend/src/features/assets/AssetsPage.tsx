@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, ChevronDown, Eye, EyeOff, LockKeyhole, Sprout, Wallet } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, ArrowLeftRight, ChevronDown, Eye, EyeOff, LockKeyhole, Sprout, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { ApiError, getAccount, type AccountBalance, type AccountSnapshot } from "../../lib/api";
@@ -172,6 +172,7 @@ export function AssetsPage() {
             <Button asChild variant="outline" className="min-h-11 text-sm font-bold"><Link to="/withdraw"><ArrowUpFromLine className="h-4 w-4"/>{t("Withdraw")}</Link></Button>
           </div>
           <div className="relative flex flex-wrap gap-2">
+            <Button asChild variant="ghost" className="min-h-10 text-sm"><Link to="/convert"><ArrowLeftRight className="h-4 w-4"/>{t("Convert")}</Link></Button>
             <Button asChild variant="ghost" className="min-h-10 text-sm"><Link to="/earn"><Sprout className="h-4 w-4"/>{t("Earn")}</Link></Button>
           </div>
         </CardContent>
