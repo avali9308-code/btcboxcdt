@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "No hay una dirección guardada para este activo",
   "No saved withdrawal address for this asset.": "No hay una dirección de retiro guardada para este activo.",
   "Add withdrawal address": "Añadir dirección de retiro",
-  "No available withdrawal asset. Please contact support.": "No hay activos disponibles para retirar. Contacta con soporte."
+  "No available withdrawal asset. Please contact support.": "No hay activos disponibles para retirar. Contacta con soporte.",
+  "This conversion quote has already been used. Request a new quote.": "Esta cotización de conversión ya se utilizó. Solicita una nueva."
 }
