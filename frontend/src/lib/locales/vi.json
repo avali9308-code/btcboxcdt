@@ -1876,7 +1876,7 @@
   "Exchange rate": "Tỷ giá",
   "You will receive": "Số tiền dự kiến nhận",
   "Quote valid for 30 seconds. The rate is locked until expiry.": "Báo giá có hiệu lực trong 30 giây và tỷ giá được khóa đến khi hết hạn.",
-  "The conversion quote has expired. Request a new quote.": "Báo giá đã hết hạn. Vui lòng lấy báo giá mới.",
+  "The conversion quote has expired. Request a new quote.": "Báo giá chuyển đổi đã hết hạn. Vui lòng lấy báo giá mới.",
   "Get quote": "Lấy báo giá",
   "Confirm conversion": "Xác nhận chuyển đổi",
   "Conversions are final once confirmed. Check the assets and amount before proceeding.": "Giao dịch chuyển đổi không thể hoàn tác sau khi xác nhận. Hãy kiểm tra tài sản và số lượng.",
@@ -1889,5 +1889,13 @@
   "No saved withdrawal address for this asset.": "Chưa có địa chỉ rút tiền được lưu cho tài sản này.",
   "Add withdrawal address": "Thêm địa chỉ rút tiền",
   "No available withdrawal asset. Please contact support.": "Hiện không có tài sản nào hỗ trợ rút tiền. Vui lòng liên hệ hỗ trợ.",
-  "This conversion quote has already been used. Request a new quote.": "Báo giá chuyển đổi này đã được sử dụng. Vui lòng lấy báo giá mới."
+  "This conversion quote has already been used. Request a new quote.": "Báo giá chuyển đổi này đã được sử dụng. Vui lòng lấy báo giá mới.",
+  "Conversion fee": "Phí chuyển đổi",
+  "Internal conversion is not available yet. No assets were moved.": "Chuyển đổi nội bộ hiện chưa khả dụng. Tài sản chưa được chuyển.",
+  "One of the selected assets is not enabled for conversion.": "Một trong các tài sản đã chọn chưa được bật tính năng chuyển đổi.",
+  "The amount exceeds the source asset precision.": "Số lượng vượt quá độ chính xác được hỗ trợ của tài sản nguồn.",
+  "The converted amount is below the supported precision.": "Số lượng sau chuyển đổi thấp hơn độ chính xác tối thiểu được hỗ trợ.",
+  "Insufficient available balance. No conversion was made.": "Số dư khả dụng không đủ. Chưa thực hiện chuyển đổi.",
+  "This request ID was already used for a different conversion.": "Mã yêu cầu này đã được sử dụng cho một giao dịch chuyển đổi khác.",
+  "The conversion was not confirmed. Check your asset balances before retrying.": "Chưa xác nhận được kết quả chuyển đổi. Hãy kiểm tra số dư và lịch sử trước khi thử lại."
 }
