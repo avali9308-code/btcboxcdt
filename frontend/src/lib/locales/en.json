@@ -1883,5 +1883,6 @@
   "Live conversion prices are temporarily unavailable.": "Live conversion prices are temporarily unavailable.",
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.",
   "Conversion completed.": "Conversion completed.",
-  "This conversion was already processed.": "This conversion was already processed."
+  "This conversion was already processed.": "This conversion was already processed.",
+  "Loading wallet balances…": "Loading wallet balances…"
 }
