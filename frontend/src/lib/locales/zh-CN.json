@@ -1883,5 +1883,6 @@
   "Live conversion prices are temporarily unavailable.": "实时兑换价格暂时不可用。",
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "兑换结果尚未确认。请刷新余额并查看操作记录后再重试。",
   "Conversion completed.": "兑换成功。",
-  "This conversion was already processed.": "该兑换请求已处理，请勿重复提交。"
+  "This conversion was already processed.": "该兑换请求已处理，请勿重复提交。",
+  "Loading wallet balances…": "正在加载钱包余额…"
 }
