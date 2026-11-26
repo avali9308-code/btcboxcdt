@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "Noch kein Auszahlungsverlauf.",
   "Funds": "Finanzen",
   "Withdrawals are currently unavailable.": "Auszahlungen sind derzeit nicht verfügbar.",
-  "Show more": "Mehr anzeigen"
+  "Show more": "Mehr anzeigen",
+  "Saved withdrawal address security notice": "Aus Sicherheitsgründen können gespeicherte Auszahlungsadressen nicht bearbeitet oder entfernt werden. Wende dich bei Änderungsbedarf an den Support."
 }
