@@ -1515,6 +1515,7 @@ export function WithdrawPage(){
  const [addresses,setAddresses]=useState<SavedCryptoAddress[]>([]);
  const [config,setConfig]=useState<WithdrawalConfig|null>(null);
  const [selectedId,setSelectedId]=useState("");
+ const [selectedCoin,setSelectedCoin]=useState("USDT");
  const [addressPickerOpen,setAddressPickerOpen]=useState(false);
  const [amount,setAmount]=useState("");
  const [fundPassword,setFundPassword]=useState("");
@@ -1550,11 +1551,13 @@ export function WithdrawPage(){
       const saved=JSON.parse(raw);
       const savedAddress=usable.find(item=>item.id===saved?.address_id);
       if(saved&&saved.version===1&&typeof saved.request_id==="string"&&/^[A-Za-z0-9_-]{16,100}$/.test(saved.request_id)&&typeof saved.amount==="string"&&typeof saved.address==="string"&&savedAddress&&!savedAddress.blocked&&!savedAddress.unbound&&savedAddress.coin===saved.coin&&savedAddress.network===saved.network){
-       setPendingIntent({...saved,expected_fee:typeof saved.expected_fee==="string"?saved.expected_fee:String(withdrawalConfig.fees[saved.coin]??"")});setSelectedId(saved.address_id);setAmount(saved.amount);
+       setPendingIntent({...saved,expected_fee:typeof saved.expected_fee==="string"?saved.expected_fee:String(withdrawalConfig.fees[saved.coin]??"")});setSelectedId(saved.address_id);setSelectedCoin(saved.coin);setAmount(saved.amount);
       }else{setPendingIntentInvalid(true);setError("We couldn't verify the saved withdrawal destination. Contact support before trying again.");}
      }else{
-      const eligible=usable.filter(item=>withdrawalConfig.fees[item.coin]!==undefined&&withdrawalConfig.allowed_networks[item.coin]?.includes(item.network));
-      setPendingIntent(null);setPendingIntentInvalid(false);setSelectedId(current=>eligible.some(item=>item.id===current)?current:(eligible[0]?.id||""));
+      const coinOptions=Object.keys(withdrawalConfig.fees).filter(coin=>!!withdrawalConfig.allowed_networks[coin]?.length&&(coin==="USDC"?!!snapshot.balances?.USDT:!!snapshot.balances?.[coin]));
+      const preferredCoin=coinOptions.includes("USDT")?"USDT":(coinOptions[0]||"USDT");
+      const eligible=usable.filter(item=>item.coin===preferredCoin);
+      setPendingIntent(null);setPendingIntentInvalid(false);setSelectedCoin(preferredCoin);setSelectedId(eligible[0]?.id||"");
      }
     }catch{setPendingIntentInvalid(true);setError("We couldn't verify your saved withdrawal request. Check withdrawal history before trying again.");}
    })
@@ -1584,19 +1587,19 @@ export function WithdrawPage(){
   if(item.blocked||item.unbound||!config)return false;
   return config.fees[item.coin]!==undefined&&config.allowed_networks[item.coin]?.includes(item.network)===true;
  });
- const selectedAddress=usableAddresses.find(item=>item.id===selectedId)??null;
- const withdrawalCoins=[...new Set(usableAddresses.map(item=>item.coin))];
- const selectedCoinAddresses=selectedAddress?usableAddresses.filter(item=>item.coin===selectedAddress.coin):[];
- const settlementCoin=selectedAddress?.coin==="USDC"?"USDT":selectedAddress?.coin;
+ const withdrawalCoins=Object.keys(config?.fees??{}).filter(coin=>!!config?.allowed_networks[coin]?.length&&(coin==="USDC"?!!account?.balances?.USDT:!!account?.balances?.[coin]));
+ const selectedAddress=usableAddresses.find(item=>item.id===selectedId&&item.coin===selectedCoin)??usableAddresses.find(item=>item.coin===selectedCoin)??null;
+ const selectedCoinAddresses=usableAddresses.filter(item=>item.coin===selectedCoin);
+ const settlementCoin=selectedCoin==="USDC"?"USDT":selectedCoin;
  const balance=settlementCoin&&account?.balances?(account.balances[settlementCoin]??{free:"0",frozen:"0"}):undefined;
- const feeValue=selectedAddress&&config?config.fees?.[selectedAddress.coin]:undefined;
+ const feeValue=config?config.fees?.[selectedCoin]:undefined;
  const fee=feeValue==null?null:Number(feeValue);
  const available=balance?.free==null?null:Number(balance.free);
  const feeVerified=fee!==null&&Number.isFinite(fee)&&fee>=0;
  const estimatedNetAmount=amount.trim()&&feeVerified&&feeValue!=null?withdrawalNetAmount(amount.trim(),String(feeValue)):null;
  const balanceVerified=available!==null&&Number.isFinite(available)&&available>=0;
- const conversionRate=selectedAddress?.coin==="USDC"?String(config?.usdc_usdt_rate??""):"1";
- const conversionVerified=selectedAddress?.coin!=="USDC"||compareDecimalStrings(conversionRate,"0")===1;
+ const conversionRate=selectedCoin==="USDC"?String(config?.usdc_usdt_rate??""):"1";
+ const conversionVerified=selectedCoin!=="USDC"||compareDecimalStrings(conversionRate,"0")===1;
  const amountWithFee=amount.trim()&&feeVerified?addDecimalStrings(amount.trim(),String(feeValue)) : undefined;
  const estimatedSettlement=amountWithFee&&conversionVerified?multiplyDecimalStringsCeil(amountWithFee,conversionRate,18)??null:null;
  const availableRaw=balance?.free==null?null:String(balance.free);
@@ -1666,18 +1669,18 @@ export function WithdrawPage(){
    {!config?.actions_enabled ? <div className="rounded-xl border border-brand-border bg-brand-surface p-4 text-sm text-brand-text-muted" role="status">{t("Withdrawals are currently unavailable.")}</div> : null}
    {config?.actions_enabled ? (
 <Card aria-busy={submitting} className="relative overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"><span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-brand-surface"/><CardHeader className="border-b border-brand-border bg-brand-surface"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><ArrowUpRight className="h-5 w-5"/></span><div className="min-w-0"><CardTitle>{t("Submit withdrawal")}</CardTitle><Link to="/address-book" className="mt-2 inline-flex min-h-9 items-center text-sm font-medium text-brand-accent hover:underline">{t("Saved crypto addresses")}</Link></div></div></CardHeader><CardContent className="p-4 sm:p-6">
-    {usableAddresses.length===0?<div className="rounded-xl border border-dashed border-brand-border p-5 text-sm text-brand-text-muted">{t("No available withdrawal address. Add one to continue.")}</div>
+    {withdrawalCoins.length===0?<div className="rounded-xl border border-dashed border-brand-border p-5 text-sm text-brand-text-muted">{t("No available withdrawal asset. Please contact support.")}</div>
     :<form aria-busy={submitting} className="space-y-4" onSubmit={submit}>
      <label className="block space-y-1.5 text-sm">
       <span className="text-brand-text-muted">{t("Asset")}</span>
-      <select aria-label={t("Asset")} value={selectedAddress?.coin??""} disabled={!!pendingIntent||pendingIntentInvalid||submitting||withdrawalCoins.length===0} onChange={event=>{const next=event.target.value;const first=usableAddresses.find(item=>item.coin===next);if(first){setAmount("");setSelectedId(first.id);setAddressPickerOpen(false);setError("");}}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15 disabled:opacity-60">
+      <select aria-label={t("Asset")} value={selectedCoin} disabled={!!pendingIntent||pendingIntentInvalid||submitting||withdrawalCoins.length===0} onChange={event=>{const next=event.target.value;const first=usableAddresses.find(item=>item.coin===next);setAmount("");setSelectedCoin(next);setSelectedId(first?.id||"");setAddressPickerOpen(false);setError("");}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15 disabled:opacity-60">
        {withdrawalCoins.map(coin=><option key={coin} value={coin}>{coin}</option>)}
       </select>
      </label>
      <div className="space-y-1.5 text-sm">
-      <span className="text-brand-text-muted">{t("Withdrawal address")} · {selectedAddress?.coin??""}</span>
-      <button type="button" disabled={!!pendingIntent||pendingIntentInvalid||submitting} aria-expanded={addressPickerOpen} aria-controls="withdraw-address-options" onClick={()=>setAddressPickerOpen(value=>!value)} className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-left text-sm text-brand-text outline-none transition-colors hover:border-brand-accent/50 focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15 disabled:cursor-not-allowed disabled:opacity-60">
-       <span className="min-w-0">{selectedAddress?<><span className="block font-medium">{selectedAddress.coin} · {selectedAddress.network}</span><span className="mt-0.5 block truncate font-mono text-xs text-brand-text-muted">{selectedAddress.address}</span></>:<span className="text-brand-text-muted">{t("Select")}</span>}</span>
+      <span className="text-brand-text-muted">{t("Withdrawal address")} · {selectedCoin}</span>
+      <button type="button" disabled={!!pendingIntent||pendingIntentInvalid||submitting||selectedCoinAddresses.length===0} aria-expanded={addressPickerOpen} aria-controls="withdraw-address-options" onClick={()=>setAddressPickerOpen(value=>!value)} className="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-left text-sm text-brand-text outline-none transition-colors hover:border-brand-accent/50 focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15 disabled:cursor-not-allowed disabled:opacity-60">
+       <span className="min-w-0">{selectedAddress?<><span className="block font-medium">{selectedAddress.coin} · {selectedAddress.network}</span><span className="mt-0.5 block truncate font-mono text-xs text-brand-text-muted">{selectedAddress.address}</span></>:<span className="text-brand-text-muted">{t("No address saved for this asset")}</span>}</span>
        <ChevronDown className={`h-4 w-4 shrink-0 text-brand-text-muted transition-transform ${addressPickerOpen?"rotate-180":""}`} aria-hidden="true"/>
       </button>
       {addressPickerOpen?<div id="withdraw-address-options" role="group" aria-label={t("Withdrawal address")} className="max-h-64 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-brand-border bg-brand-surface p-2 shadow-lg">
@@ -1687,8 +1690,9 @@ export function WithdrawPage(){
        </button>)}
       </div>:null}
      </div>
-     <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Amount")} {selectedAddress ? "(" + selectedAddress.coin + ")" : ""}</span><input inputMode="decimal" value={amount} disabled={!!pendingIntent||pendingIntentInvalid||submitting||!balanceVerified||!feeVerified} onChange={event=>setAmount(event.target.value)} placeholder="0.00" className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-brand-text outline-none transition-colors focus:border-brand-violet/60 focus:ring-2 focus:ring-brand-violet/15"/></label>
-      {selectedAddress?<div className="grid grid-cols-1 gap-3 rounded-xl border border-brand-border bg-brand-surface-2/50 p-4 text-sm min-[420px]:grid-cols-2"><div><p className="text-xs text-brand-text-muted">{t("Available")}</p><p className="mt-1 tabular-nums">{balanceVerified&&available!==null?available.toLocaleString(localeTags[language],{maximumFractionDigits:10}):"—"} {settlementCoin}</p></div><div><p className="text-xs text-brand-text-muted">{t("Withdrawal fee")}</p><p className="mt-1 tabular-nums">{feeVerified&&fee!==null?fee.toLocaleString(localeTags[language],{maximumFractionDigits:10}):"—"} {selectedAddress.coin}</p></div><div><p className="text-xs text-brand-text-muted">{t("Net amount")}</p><p className="mt-1 font-semibold tabular-nums">{estimatedNetAmount!==null?estimatedNetAmount:"—"} {selectedAddress.coin}</p></div>{selectedAddress.coin==="USDC"?<div className="min-[420px]:col-span-2 border-t border-brand-border pt-3"><p className="text-xs text-brand-text-muted">{t("Estimated USDT deduction")}</p><p className="mt-1 font-semibold tabular-nums">{estimatedSettlement!==null?Number(estimatedSettlement).toLocaleString(localeTags[language],{maximumFractionDigits:10}):"—"} USDT</p><p className="mt-1 text-xs text-brand-text-muted">{config?.usdc_usdt_rate?"1 USDC ≈ "+config.usdc_usdt_rate+" USDT · "+t("Final rate is locked when you submit."):t("USDC/USDT conversion is temporarily unavailable.")}</p></div>:null}</div>:null}
+     {selectedCoinAddresses.length===0?<div className="rounded-xl border border-dashed border-brand-border p-4 text-sm text-brand-text-muted"><p>{t("No saved withdrawal address for this asset.")}</p><Link to="/address-book" className="mt-2 inline-flex min-h-10 items-center font-medium text-brand-accent hover:underline">{t("Add withdrawal address")}</Link></div>:null}
+     <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Amount")} ({selectedCoin})</span><input inputMode="decimal" value={amount} disabled={!!pendingIntent||pendingIntentInvalid||submitting||!selectedAddress||!balanceVerified||!feeVerified} onChange={event=>setAmount(event.target.value)} placeholder="0.00" className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-brand-text outline-none transition-colors focus:border-brand-violet/60 focus:ring-2 focus:ring-brand-violet/15"/></label>
+      {selectedAddress?<div className="grid grid-cols-1 gap-3 rounded-xl border border-brand-border bg-brand-surface-2/50 p-4 text-sm min-[420px]:grid-cols-2"><div><p className="text-xs text-brand-text-muted">{t("Available")}</p><p className="mt-1 tabular-nums">{balanceVerified&&available!==null?available.toLocaleString(localeTags[language],{maximumFractionDigits:10}):"—"} {settlementCoin}</p></div><div><p className="text-xs text-brand-text-muted">{t("Withdrawal fee")}</p><p className="mt-1 tabular-nums">{feeVerified&&fee!==null?fee.toLocaleString(localeTags[language],{maximumFractionDigits:10}):"—"} {selectedCoin}</p></div><div><p className="text-xs text-brand-text-muted">{t("Net amount")}</p><p className="mt-1 font-semibold tabular-nums">{estimatedNetAmount!==null?estimatedNetAmount:"—"} {selectedCoin}</p></div>{selectedCoin==="USDC"?<div className="min-[420px]:col-span-2 border-t border-brand-border pt-3"><p className="text-xs text-brand-text-muted">{t("Estimated USDT deduction")}</p><p className="mt-1 font-semibold tabular-nums">{estimatedSettlement!==null?Number(estimatedSettlement).toLocaleString(localeTags[language],{maximumFractionDigits:10}):"—"} USDT</p><p className="mt-1 text-xs text-brand-text-muted">{config?.usdc_usdt_rate?"1 USDC ≈ "+config.usdc_usdt_rate+" USDT · "+t("Final rate is locked when you submit."):t("USDC/USDT conversion is temporarily unavailable.")}</p></div>:null}</div>:null}
      <label className="block space-y-1.5 text-sm"><span className="text-brand-text-secondary">{t("Fund password")}</span><input type="password" autoComplete="current-password" value={fundPassword} disabled={submitting} onChange={event=>setFundPassword(event.target.value)} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-brand-text outline-none transition-colors focus:border-brand-violet/60 focus:ring-2 focus:ring-brand-violet/15" required/></label>
      {account?.twofa_enabled?<label className="block space-y-1.5 text-sm"><span className="text-brand-text-secondary">{t("Two-factor code")}</span><input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={twofaCode} disabled={submitting} onChange={event=>setTwofaCode(event.target.value.replace(/\D/g,"").slice(0,6))} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-brand-text outline-none transition-colors focus:border-brand-violet/60 focus:ring-2 focus:ring-brand-violet/15" required/></label>:null}
      {error?<p role="alert" className="text-sm text-brand-danger">{error}</p>:null}
