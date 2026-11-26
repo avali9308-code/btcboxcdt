@@ -23,6 +23,7 @@ export const SUB_PAGE_ROUTES = [
   "/funds",
   "/deposit",
   "/withdraw",
+  "/convert",
   "/settings",
   "/kyc",
   "/earn",
