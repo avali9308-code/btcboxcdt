@@ -1876,7 +1876,7 @@
   "Exchange rate": "交換レート",
   "You will receive": "受取予定額",
   "Quote valid for 30 seconds. The rate is locked until expiry.": "見積もりは30秒間有効です。有効期限まではレートが固定されます。",
-  "The conversion quote has expired. Request a new quote.": "見積もりの有効期限が切れました。再取得してください。",
+  "The conversion quote has expired. Request a new quote.": "交換見積もりの有効期限が切れました。新しい見積もりを取得してください。",
   "Get quote": "見積もりを取得",
   "Confirm conversion": "交換を確定",
   "Conversions are final once confirmed. Check the assets and amount before proceeding.": "確定後の交換は取り消せません。資産と数量を確認してください。",
@@ -1889,5 +1889,13 @@
   "No saved withdrawal address for this asset.": "この資産の保存済み出金アドレスはありません。",
   "Add withdrawal address": "出金アドレスを追加",
   "No available withdrawal asset. Please contact support.": "出金可能な資産がありません。サポートにお問い合わせください。",
-  "This conversion quote has already been used. Request a new quote.": "この交換見積もりはすでに使用されています。新しい見積もりを取得してください。"
+  "This conversion quote has already been used. Request a new quote.": "この交換見積もりはすでに使用されています。新しい見積もりを取得してください。",
+  "Conversion fee": "交換手数料",
+  "Internal conversion is not available yet. No assets were moved.": "内部交換はまだ利用できません。資産は移動していません。",
+  "One of the selected assets is not enabled for conversion.": "選択した資産の一つは交換に対応していません。",
+  "The amount exceeds the source asset precision.": "入力数量が交換元資産の対応精度を超えています。",
+  "The converted amount is below the supported precision.": "交換後の数量が対応する最小精度を下回っています。",
+  "Insufficient available balance. No conversion was made.": "利用可能残高が不足しています。交換は実行されていません。",
+  "This request ID was already used for a different conversion.": "このリクエストIDは別の交換にすでに使用されています。",
+  "The conversion was not confirmed. Check your asset balances before retrying.": "交換結果を確認できませんでした。再試行する前に残高と履歴を確認してください。"
 }
