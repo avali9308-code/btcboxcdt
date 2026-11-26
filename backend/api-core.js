@@ -2808,7 +2808,7 @@ async function handleRequest(event, context) {
       return json({ ok: false, code: 'INVALID_CONVERSION_QUOTE', msg: 'Select two different assets and enter a valid amount.' }, 400);
     }
     try {
-      const registryUrl = process.env.SUPABASE_URL.replace(/\\/+$/, '') +
+      const registryUrl = process.env.SUPABASE_URL.replace(/\/+$/, '') +
         '/rest/v1/btcbox_assets?asset_code=in.(' + fromAsset + ',' + toAsset + ')&active=eq.true&select=asset_code,decimals';
       const registryResponse = await fetch(registryUrl, {
         method: 'GET', headers: supabaseHeaders(), signal: AbortSignal.timeout(5000)
