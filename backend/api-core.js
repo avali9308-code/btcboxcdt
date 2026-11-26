@@ -2804,7 +2804,7 @@ async function handleRequest(event, context) {
     const toAsset = String(params.to || '').trim().toUpperCase();
     const fromAmount = parseMoneyInput(String(params.amount || ''));
     if (!/^[A-Z0-9]{2,16}$/.test(fromAsset) || !/^[A-Z0-9]{2,16}$/.test(toAsset) ||
-        fromAsset === toAsset || fromAmount === null || compareMoney(fromAmount, '0') <= 0) {
+        fromAsset === toAsset || fromAmount === null || compareMoney(fromAmount, '0') <= 0 || compareMoney(fromAmount, '1000000000000') > 0) {
       return json({ ok: false, code: 'INVALID_CONVERSION_QUOTE', msg: 'Select two different assets and enter a valid amount.' }, 400);
     }
     try {
