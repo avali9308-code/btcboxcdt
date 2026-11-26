@@ -28,10 +28,9 @@ export const SUB_PAGE_ROUTES = [
 /**
  * Sub-page routes that are documented but not yet migrated to `SubPageLayout`.
  *
- * These intentionally keep the top-level chrome for now. Moving a path here would
- * remove its global header and bottom tab bar without a replacement navigation
- * surface, so a route may only move into `SUB_PAGE_ROUTES` in the same change that
- * wraps the page in `SubPageLayout`.
+ * These intentionally keep the top-level chrome for now. Moving a path into
+ * `SUB_PAGE_ROUTES` removes the global header and bottom tab bar, so the page must
+ * provide its own title and back affordance in the same change.
  *
  * Pending migration: /settings, /kyc, /earn, /seconds, /contract, /support,
  * /trade-hub.
