@@ -25,6 +25,9 @@ const routes = [
   { path: "/withdraw", heading: "Withdraw" },
   { path: "/earn", heading: "Earn" },
   { path: "/kyc", heading: "Identity verification" },
+  { path: "/rewards", heading: "Rewards & referrals" },
+  { path: "/address-book", heading: "Address book" },
+  { path: "/fund-password", heading: "Fund password" },
   { path: "/contract", heading: "Perpetual" },
   { path: "/seconds", heading: "Seconds contracts" },
 ];
@@ -339,7 +342,7 @@ async function assertPageAtWidth(
     await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible({ timeout: 15000 });
   }
 
-  if (["/home", "/markets", "/trade/BTCUSDT", "/assets", "/me"].includes(route.path)) {
+  if (["/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/me"].includes(route.path)) {
     const mobileNavigation = page.locator(".bf-bottom-nav");
     const desktopProducts = page.locator('header nav[aria-label="Trade products"]');
     const desktopAssets = page.locator('header:has(nav[aria-label="Trade products"]) a[href="/assets"][aria-label="Assets"]');
@@ -361,6 +364,13 @@ async function assertPageAtWidth(
       page.getByRole("link", { name: "BTCBOX home" }).getByRole("img", { name: "BTCBOX" }),
     ).toBeVisible();
   }
+  if (["/settings", "/support", "/earn", "/kyc", "/rewards", "/address-book", "/fund-password"].includes(route.path)) {
+    await expect(
+      page.locator('a[aria-label="Back"], button[aria-label="Back"]'),
+      route.path + " must expose a visible in-app return control.",
+    ).toBeVisible();
+  }
+
   if (["/deposit", "/withdraw"].includes(route.path)) {
     await expect(page.locator(".bf-bottom-nav"), "Funds workflows must hide the global mobile tab bar.").toBeHidden();
     await expect(page.getByRole("link", { name: "BTCBOX home" })).toHaveCount(0);
