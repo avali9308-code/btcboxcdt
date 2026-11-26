@@ -1314,8 +1314,9 @@ export function InternalConversionPage(){
    if(controller.signal.aborted)return;
    setAccount(snapshot);
    const assets=Object.keys(snapshot.balances||{}).sort();
-   setFromAsset(current=>assets.includes(current)?current:(assets.includes("USDT")?"USDT":assets[0]||"USDT"));
-   setToAsset(current=>assets.includes(current)&&current!==fromAsset?current:(assets.find(asset=>asset!==fromAsset)||"BTC"));
+   const nextFrom=assets.includes(fromAsset)?fromAsset:(assets.includes("USDT")?"USDT":assets[0]||"");
+   const nextTo=assets.includes(toAsset)&&toAsset!==nextFrom?toAsset:(assets.find(asset=>asset!==nextFrom)||"");
+   setFromAsset(nextFrom);setToAsset(nextTo);
   }).catch(reason=>{
    if(reason instanceof Error&&reason.name==="AbortError")return;
    if(!controller.signal.aborted)setError(localizedFailure(reason,"Account data is temporarily unavailable."));
@@ -1359,7 +1360,7 @@ export function InternalConversionPage(){
     <CardHeader className="border-b border-brand-border"><CardTitle>{t("Convert assets")}</CardTitle><CardDescription>{t("Convert between supported assets at a live market rate.")}</CardDescription></CardHeader>
     <CardContent className="space-y-4 p-4 sm:p-6">
      <div className="space-y-2 rounded-xl border border-brand-border bg-brand-surface-2/50 p-4">
-      <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("From")}</span><select value={fromAsset} onChange={event=>{setFromAsset(event.target.value);resetQuote();}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface px-3 text-sm text-brand-text">{assets.map(asset=><option key={asset} value={asset}>{asset}</option>)}</select></label>
+      <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("From")}</span><select value={fromAsset} onChange={event=>{const next=event.target.value;setFromAsset(next);if(next===toAsset)setToAsset(assets.find(asset=>asset!==next)||"");resetQuote();}} className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface px-3 text-sm text-brand-text">{assets.map(asset=><option key={asset} value={asset}>{asset}</option>)}</select></label>
       <div className="flex items-center justify-between text-xs text-brand-text-muted"><span>{t("Available balance")}</span><span className="font-mono tabular-nums">{formatDecimalAmount(fromBalance,localeTags[language])} {fromAsset}</span></div>
       <label className="block space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Amount")}</span><input inputMode="decimal" value={amount} onChange={event=>{setAmount(event.target.value);resetQuote();}} placeholder="0.00" className="min-h-12 w-full rounded-xl border border-brand-border bg-brand-surface px-3 text-sm text-brand-text outline-none focus:border-brand-accent/60" /></label>
      </div>
@@ -1376,7 +1377,7 @@ export function InternalConversionPage(){
      </div>:null}
      {error?<p className="text-sm text-brand-danger" role="alert">{t(error)}</p>:null}
      {message?<p className="text-sm text-brand-success" role="status">{t(message)}</p>:null}
-     {!quote?<Button type="button" block className="min-h-12" disabled={quoting||submitting||!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset||compareDecimalStrings(amount,"0")!==1||compareDecimalStrings(amount,String(fromBalance))===1} onClick={getQuote}>{quoting?t("Loading…"):t("Get quote")}</Button>
+     {!quote?<Button type="button" block className="min-h-12" disabled={quoting||submitting||assets.length<2||!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset||compareDecimalStrings(amount,"0")!==1||compareDecimalStrings(amount,String(fromBalance))===1} onClick={getQuote}>{quoting?t("Loading…"):t("Get quote")}</Button>
       :<Button type="button" block className="min-h-12" disabled={submitting||quoting} onClick={confirm}>{submitting?t("Processing…"):t("Confirm conversion")}</Button>}
      <p className="text-xs leading-5 text-brand-text-muted">{t("Conversions are final once confirmed. Check the assets and amount before proceeding.")}</p>
     </CardContent>
