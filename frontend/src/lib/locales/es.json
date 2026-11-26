@@ -1883,5 +1883,6 @@
   "Live conversion prices are temporarily unavailable.": "Los precios de conversión en tiempo real no están disponibles temporalmente.",
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "El resultado no está confirmado. Actualiza tus saldos y consulta el historial antes de volver a intentarlo.",
   "Conversion completed.": "Conversión completada.",
-  "This conversion was already processed.": "Esta conversión ya se ha procesado."
+  "This conversion was already processed.": "Esta conversión ya se ha procesado.",
+  "Loading wallet balances…": "Cargando saldos de la cartera…"
 }
