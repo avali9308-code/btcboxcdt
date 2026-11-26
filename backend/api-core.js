@@ -1485,6 +1485,20 @@ function addMoney(a, b) {
   const fraction = digits.slice(-scale).replace(/0+$/, '');
   return fraction ? whole + '.' + fraction : whole;
 }
+function multiplyMoneyFloor(a, b) {
+  const left = parseMoneyInput(String(a)), right = parseMoneyInput(String(b));
+  if (left === null || right === null) return null;
+  const lp = left.split('.'), rp = right.split('.');
+  const ls = (lp[1] || '').length, rs = (rp[1] || '').length;
+  const product = moneyScaledInteger(left, ls) * moneyScaledInteger(right, rs);
+  const denominator = 10n ** BigInt(ls + rs);
+  const scaled = (product * (10n ** 18n)) / denominator;
+  const digits = scaled.toString().padStart(19, '0');
+  const whole = digits.slice(0, -18);
+  const fraction = digits.slice(-18).replace(/0+$/, '');
+  return fraction ? whole + '.' + fraction : whole;
+}
+
 function multiplyMoneyCeil(a, b) {
   const left = parseMoneyInput(String(a)), right = parseMoneyInput(String(b));
   if (left === null || right === null) return null;
@@ -2764,6 +2778,120 @@ async function handleRequest(event, context) {
       return json({ ok: true, withdrawals: withdrawals, has_more: result.has_more, next_cursor: nextCursor });
     } catch (_) {
       return json({ ok: false, code: 'WITHDRAWAL_HISTORY_UNAVAILABLE', msg: 'Withdrawal history could not be loaded. Please try again.' }, 503);
+    }
+  }
+
+  // ---------- GET /api/convert/quote ----------
+  // Quotes are signed, user-bound and valid for 30 seconds. The client cannot
+  // alter the rate or receive amount before the atomic ledger operation.
+  if (path === 'convert/quote' && method === 'GET') {
+    if (!user) return json({ ok: false, msg: 'Not signed in.', need_login: true }, 401);
+    const rl = await rateCheckShared('spot_order', String(user.uid));
+    if (rl.unavailable) return rateLimitUnavailableJson();
+    if (rl.limited) return rateLimitedJson(rl.retryAfter);
+    const params = event.queryStringParameters || {};
+    const fromAsset = String(params.from || '').trim().toUpperCase();
+    const toAsset = String(params.to || '').trim().toUpperCase();
+    const fromAmount = parseMoneyInput(String(params.amount || ''));
+    if (!/^[A-Z0-9]{2,16}$/.test(fromAsset) || !/^[A-Z0-9]{2,16}$/.test(toAsset) ||
+        fromAsset === toAsset || fromAmount === null || compareMoney(fromAmount, '0') <= 0) {
+      return json({ ok: false, code: 'INVALID_CONVERSION_QUOTE', msg: 'Select two different assets and enter a valid amount.' }, 400);
+    }
+    try {
+      const requested = [fromAsset, toAsset].filter(asset => asset !== 'USDT');
+      const prices = await getLiveUsdtPrices(requested);
+      const fromPrice = fromAsset === 'USDT' ? 1 : Number(prices[fromAsset]);
+      const toPrice = toAsset === 'USDT' ? 1 : Number(prices[toAsset]);
+      if (!Number.isFinite(fromPrice) || fromPrice <= 0 || !Number.isFinite(toPrice) || toPrice <= 0) {
+        return json({ ok: false, code: 'CONVERSION_MARKET_UNAVAILABLE', msg: 'A live conversion price is unavailable for this asset pair.' }, 503);
+      }
+      const rate = (fromPrice / toPrice).toFixed(12);
+      const toAmount = multiplyMoneyFloor(fromAmount, rate);
+      if (!toAmount || compareMoney(toAmount, '0') <= 0) {
+        return json({ ok: false, code: 'CONVERSION_AMOUNT_TOO_SMALL', msg: 'The converted amount is below the supported precision.' }, 400);
+      }
+      const issuedAt = Date.now();
+      const payload = {
+        uid: String(user.uid), from_asset: fromAsset, to_asset: toAsset,
+        from_amount: fromAmount, to_amount: toAmount, rate,
+        issued_at: issuedAt, expires_at: issuedAt + 30000
+      };
+      const secret = String(process.env.BTCBOX_RATE_LIMIT_HMAC_SECRET || '');
+      if (Buffer.byteLength(secret, 'utf8') < 32) {
+        return json({ ok: false, code: 'CONVERSION_QUOTE_UNAVAILABLE', msg: 'Secure conversion quotes are not configured.' }, 503);
+      }
+      const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+      const signature = crypto.createHmac('sha256', secret).update('btcbox-conversion-quote-v1|' + encoded).digest('base64url');
+      return json({ ok: true, from_asset: fromAsset, to_asset: toAsset, from_amount: fromAmount,
+        to_amount: toAmount, rate, expires_at: payload.expires_at, quote_token: encoded + '.' + signature });
+    } catch (_) {
+      return json({ ok: false, code: 'CONVERSION_MARKET_UNAVAILABLE', msg: 'Live conversion prices are temporarily unavailable.' }, 503);
+    }
+  }
+
+  // ---------- POST /api/convert ----------
+  if (path === 'convert' && method === 'POST') {
+    if (!user) return json({ ok: false, msg: 'Not signed in.', need_login: true }, 401);
+    if (user.frozen) return json({ ok: false, code: 'ACCOUNT_FROZEN', msg: 'Account frozen. Asset conversion is not available.' }, 403);
+    const rl = await rateCheckShared('spot_order', String(user.uid));
+    if (rl.unavailable) return rateLimitUnavailableJson();
+    if (rl.limited) return rateLimitedJson(rl.retryAfter);
+    const requestId = String(body.request_id || '').trim();
+    const quoteToken = String(body.quote_token || '');
+    if (!/^[A-Za-z0-9_-]{16,80}$/.test(requestId) || quoteToken.length > 4096) {
+      return json({ ok: false, code: 'INVALID_CONVERSION_REQUEST', msg: 'Refresh the quote and try again.' }, 400);
+    }
+    const parts = quoteToken.split('.');
+    if (parts.length !== 2) return json({ ok: false, code: 'INVALID_CONVERSION_QUOTE', msg: 'The conversion quote is invalid. Request a new quote.' }, 400);
+    const secret = String(process.env.BTCBOX_RATE_LIMIT_HMAC_SECRET || '');
+    if (Buffer.byteLength(secret, 'utf8') < 32) return json({ ok: false, code: 'CONVERSION_QUOTE_UNAVAILABLE', msg: 'Secure conversion quotes are not configured.' }, 503);
+    const expected = crypto.createHmac('sha256', secret).update('btcbox-conversion-quote-v1|' + parts[0]).digest();
+    let supplied;
+    try { supplied = Buffer.from(parts[1], 'base64url'); } catch (_) { supplied = Buffer.alloc(0); }
+    if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+      return json({ ok: false, code: 'INVALID_CONVERSION_QUOTE', msg: 'The conversion quote is invalid. Request a new quote.' }, 400);
+    }
+    let quote;
+    try { quote = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')); } catch (_) { quote = null; }
+    if (!quote || quote.uid !== String(user.uid) || !/^[A-Z0-9]{2,16}$/.test(quote.from_asset || '') ||
+        !/^[A-Z0-9]{2,16}$/.test(quote.to_asset || '') || quote.from_asset === quote.to_asset ||
+        parseMoneyInput(String(quote.from_amount || '')) === null || parseMoneyInput(String(quote.to_amount || '')) === null ||
+        parseMoneyInput(String(quote.rate || '')) === null || !Number.isSafeInteger(quote.expires_at) ||
+        quote.expires_at < Date.now() || quote.expires_at > Date.now() + 31000) {
+      return json({ ok: false, code: 'CONVERSION_QUOTE_EXPIRED', msg: 'The conversion quote has expired. Request a new quote.' }, 409);
+    }
+    if (!financialWritesEnabled() || !supabaseStorageConfigured()) {
+      return json({ ok: false, code: 'FINANCIAL_CUTOVER_INCOMPLETE', msg: 'The financial ledger is not ready. No conversion was made.' }, 503);
+    }
+    const requestHash = crypto.createHash('sha256').update([
+      String(user.uid), quote.from_asset, quote.to_asset, quote.from_amount,
+      quote.to_amount, quote.rate, String(quote.issued_at), String(quote.expires_at)
+    ].join('|')).digest('hex');
+    try {
+      const base = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+      const rpc = await fetch(base + '/rest/v1/rpc/apply_internal_conversion_atomic', {
+        method: 'POST', headers: supabaseHeaders(),
+        body: JSON.stringify({
+          p_request_id: requestId, p_user_id: String(user.uid),
+          p_from_asset: quote.from_asset, p_to_asset: quote.to_asset,
+          p_from_amount: quote.from_amount, p_to_amount: quote.to_amount,
+          p_quote_rate: quote.rate, p_request_hash: requestHash,
+          p_metadata: { quote_issued_at: quote.issued_at, quote_expires_at: quote.expires_at }
+        }),
+        signal: AbortSignal.timeout(8000)
+      });
+      const result = await rpc.json().catch(() => null);
+      if (!rpc.ok || !result || result.ok !== true || typeof result.duplicate !== 'boolean') {
+        const insufficient = /insufficient funds/i.test(JSON.stringify(result || {}));
+        return json({ ok: false, code: insufficient ? 'INSUFFICIENT_FUNDS' : 'CONVERSION_NOT_CONFIRMED',
+          msg: insufficient ? 'Insufficient available balance. No conversion was made.' : 'The conversion was not confirmed. Check your asset balances before retrying.' }, insufficient ? 400 : 503);
+      }
+      return json({ ok: true, duplicate: result.duplicate, operation_id: result.operation_id,
+        from_asset: quote.from_asset, to_asset: quote.to_asset,
+        from_amount: quote.from_amount, to_amount: quote.to_amount, rate: quote.rate });
+    } catch (_) {
+      return json({ ok: false, code: 'CONVERSION_RESULT_UNCONFIRMED',
+        msg: 'The conversion result is unconfirmed. Refresh your balances and check operation history before retrying.' }, 503);
     }
   }
 
