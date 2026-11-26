@@ -11,7 +11,7 @@ import { useAuthDialog } from "../../lib/auth-dialog";
 import { ChartDrawer } from "../trade/ChartDrawer";
 
 import type { ReactNode } from "react";
-import { ArrowUpRight, LockKeyhole, Wallet, ChartNoAxesCombined, ArrowLeftRight, Sprout, BadgeCheck, ShieldCheck, Headset, Columns2, Gift, Rocket } from "lucide-react";
+import { ArrowUpRight, ArrowDownToLine, ArrowUpFromLine, LockKeyhole, Wallet, ChartNoAxesCombined, ArrowLeftRight, Sprout, BadgeCheck, ShieldCheck, Headset, Columns2, Gift, Rocket } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -1192,6 +1192,32 @@ const depositNetworks:Record<string,string[]>={BTC:["BTC"],ETH:["ERC20"],USDT:["
  * Displays deposit instructions, address selection, and deposit history.
  * Uses the configured deposit networks and existing wallet data sources.
  */
+
+/**
+ * Second-level funds directory. Keeps deposit and withdrawal as separate
+ * third-level workflows instead of sending users directly from Assets.
+ */
+export function FundsPage(){
+ const {t}=useI18n();
+ const services=[
+  {title:"Deposit",description:"Deposit address",to:"/deposit",icon:ArrowDownToLine},
+  {title:"Withdraw",description:"Submit withdrawal",to:"/withdraw",icon:ArrowUpFromLine},
+ ];
+ return <PageFrame title="Funds" tone="assets" backTo="/assets">
+  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+   {services.map(({title,description,to,icon:Icon})=><Card key={to} className="border border-white/[0.08] bg-brand-surface transition-colors hover:border-brand-accent/35">
+    <CardContent className="flex min-w-0 flex-col gap-5 p-5 sm:p-6">
+     <div className="flex items-center gap-3">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Icon className="h-5 w-5"/></span>
+      <div className="min-w-0"><h2 className="text-base font-semibold text-brand-text">{t(title)}</h2><p className="mt-1 text-sm text-brand-text-muted">{t(description)}</p></div>
+     </div>
+     <Button asChild className="min-h-11 w-full"><Link to={to}>{t(title)}</Link></Button>
+    </CardContent>
+   </Card>)}
+  </div>
+ </PageFrame>;
+}
+
 export function DepositPage(){
  const {t}=useI18n();
  const [depositHistory,setDepositHistory]=useState<DepositRecord[]>([]);
@@ -1244,7 +1270,7 @@ export function DepositPage(){
  },[]);
  const changeCoin=(next:string)=>{setAddress("");setError("");setCopyMessage("");setCoin(next);setNetwork(depositNetworks[next][0]);};
  const changeNetwork=(next:string)=>{setAddress("");setError("");setCopyMessage("");setNetwork(next);};
- return <PageFrame title="Deposit" tone="assets" backTo="/assets">
+ return <PageFrame title="Deposit" tone="assets" backTo="/funds">
   <Card className="relative overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"><span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-brand-surface"/><CardHeader className="border-b border-brand-border bg-brand-surface"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Wallet className="h-5 w-5"/></span><div><CardTitle>{t("Deposit address")}</CardTitle></div></div></CardHeader><CardContent className="space-y-5 p-4 sm:p-6">
    <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Asset")}</span><select value={coin} onChange={e=>changeCoin(e.target.value)} className="h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15">{Object.keys(depositNetworks).map(x=><option key={x}>{x}</option>)}</select></label><label className="space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Network")}</span><select value={network} onChange={e=>changeNetwork(e.target.value)} className="h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 p-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15">{depositNetworks[coin].map(x=><option key={x}>{x}</option>)}</select></label></div>
    {loading?<p className="rounded-xl border border-brand-border p-4 text-sm text-brand-text-muted" role="status">{t("Loading configured deposit address…")}</p>
@@ -1542,12 +1568,11 @@ export function WithdrawPage(){
   }catch{setHistoryError("Withdrawal history is temporarily unavailable.");}
   finally{setHistoryLoading(false);}
  };
- return <PageFrame title="Withdraw" tone="assets" backTo="/assets">
+ return <PageFrame title="Withdraw" tone="assets" backTo="/funds">
   {loading?<Card className="border-brand-border bg-brand-surface"><CardContent className="p-5 text-sm text-brand-text-muted" role="status">{t("Loading wallet and saved addresses…")}</CardContent></Card>
   :needsSignIn&&!DEV_OPEN_ACCOUNT_PAGES?<Card className="border-brand-border bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-xs text-brand-text-muted">{t("Please sign in to view your account data")}</p><Button asChild size="sm" className="h-10"><Link to="/login">{t("Go to sign in")}</Link></Button></CardContent></Card>
   :error&&!account?<Card className="border-brand-danger/30 bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-5"><p className="text-sm text-brand-danger" role="alert">{t(error)}</p><Button size="sm" variant="outline" onClick={()=>setReload(n=>n+1)}>{t("Try again")}</Button></CardContent></Card>
   :<>
-   <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)] xl:gap-5">
    {config?.actions_enabled ? (
 <Card aria-busy={submitting} className="relative overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"><span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-brand-surface"/><CardHeader className="border-b border-brand-border bg-brand-surface"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><ArrowUpRight className="h-5 w-5"/></span><div className="min-w-0"><CardTitle>{t("Submit withdrawal")}</CardTitle><Link to="/address-book" className="mt-2 inline-flex min-h-9 items-center text-sm font-medium text-brand-accent hover:underline">{t("Saved crypto addresses")}</Link></div></div></CardHeader><CardContent className="p-4 sm:p-6">
     {usableAddresses.length===0?<div className="rounded-xl border border-dashed border-brand-border p-5 text-sm text-brand-text-muted">{t("No available withdrawal address. Add one to continue.")}</div>
@@ -1565,28 +1590,7 @@ export function WithdrawPage(){
     </form>}
    </CardContent></Card>
 ) : null}
-   <Card className="overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
-    <CardHeader className="border-b border-brand-border bg-brand-surface">
-     <div className="flex min-w-0 items-center gap-3">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-cyan/10 text-brand-cyan"><Wallet className="h-4 w-4"/></span>
-      <div className="min-w-0"><CardTitle>{t("Available balances")}</CardTitle><CardDescription>{account?.valuation_complete?t("Estimated total value"):t("Some asset prices are unavailable; total valuation is incomplete.")}</CardDescription></div>
-     </div>
-    </CardHeader>
-    <CardContent className="p-3 sm:p-4">
-     {Object.keys(account?.balances||{}).length===0
-      ?<p className="rounded-xl border border-dashed border-brand-border p-4 text-sm text-brand-text-muted">{t("No asset balances are currently available.")}</p>
-      :<div className="divide-y divide-brand-border">
-       {(Object.entries(account?.balances||{}) as Array<[string,AccountBalance]>).map(([asset,row])=><div key={asset} className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 py-3 first:pt-1 last:pb-1">
-        <div className="flex min-w-0 items-center gap-2"><TokenIcon symbol={asset} className="h-8 w-8 shrink-0"/><div className="min-w-0"><p className="truncate text-sm font-semibold text-brand-text">{asset}</p><p className="text-xs text-brand-text-muted">{t("Wallet balance")}</p></div></div>
-        <div className="grid min-w-0 grid-cols-2 gap-2 text-right">
-         <div className="min-w-0"><p className="text-[11px] text-brand-text-muted">{t("Available")}</p><p className="mt-1 break-all text-xs font-semibold tabular-nums text-brand-text">{row.free==null?"—":String(row.free)}</p></div>
-         <div className="min-w-0"><p className="text-[11px] text-brand-text-muted">{t("Frozen")}</p><p className="mt-1 break-all text-xs tabular-nums text-brand-text-secondary">{row.frozen==null?"—":String(row.frozen)}</p></div>
-        </div>
-       </div>)}
-      </div>}
-    </CardContent>
-   </Card>
-   </div>
+
    <Card className="overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
     <CardHeader className="gap-3 border-b border-brand-border bg-brand-surface-2/60 sm:flex-row sm:items-center sm:justify-between">
      <div className="min-w-0"><CardTitle>{t("Withdrawal history")}</CardTitle></div>
