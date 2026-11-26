@@ -1566,7 +1566,8 @@ export function WithdrawPage(){
   }catch{setHistoryError("Withdrawal history is temporarily unavailable.");}
   finally{setHistoryLoading(false);}
  };
- return <PageFrame title="Withdraw" tone="assets" backTo="/funds" className="funds-flow-page">\n  <div className="mx-auto w-full max-w-3xl space-y-5">
+ return <PageFrame title="Withdraw" tone="assets" backTo="/funds" className="funds-flow-page">
+  <div className="mx-auto w-full max-w-3xl space-y-5">
   {loading?<Card className="border-brand-border bg-brand-surface"><CardContent className="p-5 text-sm text-brand-text-muted" role="status">{t("Loading wallet and saved addresses…")}</CardContent></Card>
   :needsSignIn&&!DEV_OPEN_ACCOUNT_PAGES?<Card className="border-brand-border bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-xs text-brand-text-muted">{t("Please sign in to view your account data")}</p><Button asChild size="sm" className="h-10"><Link to="/login">{t("Go to sign in")}</Link></Button></CardContent></Card>
   :error&&!account?<Card className="border-brand-danger/30 bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-5"><p className="text-sm text-brand-danger" role="alert">{t(error)}</p><Button size="sm" variant="outline" onClick={()=>setReload(n=>n+1)}>{t("Try again")}</Button></CardContent></Card>
