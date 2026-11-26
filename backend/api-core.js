@@ -2812,7 +2812,7 @@ async function handleRequest(event, context) {
       }
       const issuedAt = Date.now();
       const payload = {
-        uid: String(user.uid), from_asset: fromAsset, to_asset: toAsset,
+        uid: String(user.uid), quote_id: crypto.randomUUID(), from_asset: fromAsset, to_asset: toAsset,
         from_amount: fromAmount, to_amount: toAmount, rate,
         issued_at: issuedAt, expires_at: issuedAt + 30000
       };
@@ -2853,7 +2853,7 @@ async function handleRequest(event, context) {
     }
     let quote;
     try { quote = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')); } catch (_) { quote = null; }
-    if (!quote || quote.uid !== String(user.uid) || !/^[A-Z0-9]{2,16}$/.test(quote.from_asset || '') ||
+    if (!quote || quote.uid !== String(user.uid) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(quote.quote_id || '') || !/^[A-Z0-9]{2,16}$/.test(quote.from_asset || '') ||
         !/^[A-Z0-9]{2,16}$/.test(quote.to_asset || '') || quote.from_asset === quote.to_asset ||
         parseMoneyInput(String(quote.from_amount || '')) === null || parseMoneyInput(String(quote.to_amount || '')) === null ||
         parseMoneyInput(String(quote.rate || '')) === null || !Number.isSafeInteger(quote.expires_at) ||
@@ -2872,11 +2872,11 @@ async function handleRequest(event, context) {
       const rpc = await fetch(base + '/rest/v1/rpc/apply_internal_conversion_atomic', {
         method: 'POST', headers: supabaseHeaders(),
         body: JSON.stringify({
-          p_request_id: requestId, p_user_id: String(user.uid),
+          p_request_id: requestId, p_quote_id: quote.quote_id, p_user_id: String(user.uid),
           p_from_asset: quote.from_asset, p_to_asset: quote.to_asset,
           p_from_amount: quote.from_amount, p_to_amount: quote.to_amount,
           p_quote_rate: quote.rate, p_request_hash: requestHash,
-          p_metadata: { quote_issued_at: quote.issued_at, quote_expires_at: quote.expires_at }
+          p_metadata: { quote_id: quote.quote_id, quote_issued_at: quote.issued_at, quote_expires_at: quote.expires_at }
         }),
         signal: AbortSignal.timeout(8000)
       });
