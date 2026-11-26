@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "Chưa có lịch sử rút tiền.",
   "Funds": "Quản lý vốn",
   "Withdrawals are currently unavailable.": "Hiện tại, chức năng rút tiền chưa khả dụng.",
-  "Show more": "Hiển thị thêm"
+  "Show more": "Hiển thị thêm",
+  "Saved withdrawal address security notice": "Để bảo vệ tài sản, địa chỉ rút tiền đã lưu không thể chỉnh sửa hoặc xóa. Vui lòng liên hệ bộ phận hỗ trợ nếu bạn cần thay đổi."
 }
