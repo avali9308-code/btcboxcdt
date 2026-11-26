@@ -1555,7 +1555,7 @@ export function WithdrawPage(){
        setPendingIntent({...saved,expected_fee:typeof saved.expected_fee==="string"?saved.expected_fee:String(withdrawalConfig.fees[saved.coin]??"")});setSelectedId(saved.address_id);setSelectedCoin(saved.coin);setAmount(saved.amount);
       }else{setPendingIntentInvalid(true);setError("We couldn't verify the saved withdrawal destination. Contact support before trying again.");}
      }else{
-      const coinOptions=Object.keys(withdrawalConfig.fees).filter(coin=>!!withdrawalConfig.allowed_networks[coin]?.length&&(coin==="USDC"?!!snapshot.balances?.USDT:!!snapshot.balances?.[coin]));
+      const coinOptions=Object.keys(withdrawalConfig.fees).filter(coin=>!!withdrawalConfig.allowed_networks[coin]?.length);
       const preferredCoin=coinOptions.includes("USDT")?"USDT":(coinOptions[0]||"USDT");
       const eligible=usable.filter(item=>item.coin===preferredCoin);
       setPendingIntent(null);setPendingIntentInvalid(false);setSelectedCoin(preferredCoin);setSelectedId(eligible[0]?.id||"");
@@ -1588,7 +1588,7 @@ export function WithdrawPage(){
   if(item.blocked||item.unbound||!config)return false;
   return config.fees[item.coin]!==undefined&&config.allowed_networks[item.coin]?.includes(item.network)===true;
  });
- const withdrawalCoins=Object.keys(config?.fees??{}).filter(coin=>!!config?.allowed_networks[coin]?.length&&(coin==="USDC"?!!account?.balances?.USDT:!!account?.balances?.[coin]));
+ const withdrawalCoins=Object.keys(config?.fees??{}).filter(coin=>!!config?.allowed_networks[coin]?.length);
  const selectedAddress=usableAddresses.find(item=>item.id===selectedId&&item.coin===selectedCoin)??usableAddresses.find(item=>item.coin===selectedCoin)??null;
  const selectedCoinAddresses=usableAddresses.filter(item=>item.coin===selectedCoin);
  const settlementCoin=selectedCoin==="USDC"?"USDT":selectedCoin;
