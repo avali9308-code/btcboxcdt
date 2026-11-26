@@ -845,7 +845,7 @@ test("account and home navigation preserve safe return destinations", async ({ p
   await page.locator('a[href="/orders"]').click();
   await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
   await page.locator('button[aria-label="Back"]').click();
-  await expect(page).toHaveURL(/\\/me$/);
+  await expect(page).toHaveURL(/\/me$/);
 
   await page.goto("/orders", { waitUntil: "domcontentloaded" });
   await page.locator('button[aria-label="Back"]').click();
