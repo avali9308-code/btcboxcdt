@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "Ainda não há histórico de levantamentos.",
   "Funds": "Fundos",
   "Withdrawals are currently unavailable.": "Os saques estão indisponíveis no momento.",
-  "Show more": "Mostrar mais"
+  "Show more": "Mostrar mais",
+  "Saved withdrawal address security notice": "Por segurança, os endereços de saque salvos não podem ser editados nem removidos. Entre em contato com o suporte se precisar de alguma alteração."
 }
