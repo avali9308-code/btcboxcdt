@@ -103,7 +103,8 @@ BEGIN
      OR p_to_amount IS NULL OR p_to_amount <= 0
      OR p_quote_rate IS NULL OR p_quote_rate <= 0
      OR p_quote_expires_at IS NULL OR p_quote_expires_at <= 0
-     OR p_request_hash IS NULL OR p_request_hash !~ '^[0-9a-f]{64}
+     OR p_request_hash IS NULL OR p_request_hash !~ '^[0-9a-f]{64}$'
+     OR p_metadata IS NULL OR jsonb_typeof(p_metadata) <> 'object' THEN
     RAISE EXCEPTION 'invalid internal conversion request';
   END IF;
 
