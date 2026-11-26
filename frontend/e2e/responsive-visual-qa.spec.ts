@@ -828,7 +828,7 @@ test("trade interaction QA desktop order-book side and price handoff", async ({ 
 // passing only at the seven required snapshot widths. These are desktop-browser
 // viewport sweeps; independent touch-device coverage is provided above.
 for (const route of routes.filter((item) => [
-  "/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/contract",
+  "/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/funds", "/deposit", "/withdraw", "/contract",
 ].includes(item.path))) {
   test("continuous responsive sweep " + route.path, async ({ page }) => {
     test.setTimeout(300_000);
