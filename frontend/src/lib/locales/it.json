@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "Nessun indirizzo salvato per questo asset",
   "No saved withdrawal address for this asset.": "Non è stato salvato alcun indirizzo di prelievo per questo asset.",
   "Add withdrawal address": "Aggiungi indirizzo di prelievo",
-  "No available withdrawal asset. Please contact support.": "Nessun asset disponibile per il prelievo. Contatta l'assistenza."
+  "No available withdrawal asset. Please contact support.": "Nessun asset disponibile per il prelievo. Contatta l'assistenza.",
+  "This conversion quote has already been used. Request a new quote.": "Questo preventivo di conversione è già stato utilizzato. Richiedine uno nuovo."
 }
