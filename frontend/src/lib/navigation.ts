@@ -22,28 +22,21 @@ export const SUB_PAGE_ROUTES = [
   "/orders",
   "/deposit",
   "/withdraw",
+  "/settings",
   "/kyc",
   "/earn",
   "/support",
   "/trade-hub",
   "/rewards",
-  "/new-listings",
   "/address-book",
   "/fund-password",
 ] as const;
 
 /**
- * Sub-page routes that are documented but not yet migrated to `SubPageLayout`.
- *
- * These intentionally keep the top-level chrome for now. Moving a path into
- * `SUB_PAGE_ROUTES` removes the global header and bottom tab bar, so the page must
- * provide its own title and back affordance in the same change.
- *
- * Routes that still own their own product-level navigation are intentionally
- * excluded until their screen wrappers are migrated.
+ * Routes intentionally kept at the top tier because they are primary product
+ * surfaces or still need a dedicated secondary-page header before migration.
  */
 export const PENDING_SUB_PAGE_ROUTES = [
-  "/settings",
   "/seconds",
   "/contract",
 ] as const;
