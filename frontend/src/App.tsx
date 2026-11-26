@@ -26,6 +26,7 @@ const KycPage = lazy(() => import("./features/pages/Pages").then((m) => ({ defau
 const SupportPage = lazy(() => import("./features/pages/Pages").then((m) => ({ default: m.SupportPage })));
 const DepositPage = lazy(() => import("./features/pages/Pages").then((m) => ({ default: m.DepositPage })));
 const WithdrawPage = lazy(() => import("./features/pages/Pages").then((m) => ({ default: m.WithdrawPage })));
+const InternalConversionPage = lazy(() => import("./features/pages/Pages").then((m) => ({ default: m.InternalConversionPage })));
 const AddressBookPage = lazy(() => import("./features/pages/AddressBookPage").then((m) => ({ default: m.AddressBookPage })));
 const FundPasswordPage = lazy(() => import("./features/account/FundPasswordPage").then((m) => ({ default: m.FundPasswordPage })));
 const EarnPage = lazy(() => import("./features/pages/Pages").then((m) => ({ default: m.EarnPage })));
@@ -112,6 +113,7 @@ function CustomerRoutes() {
     <Route path="/orders" element={<ProtectedAccountRoute><OrdersPage /></ProtectedAccountRoute>} />
     <Route path="/deposit" element={<ProtectedAccountRoute><DepositPage /></ProtectedAccountRoute>} />
     <Route path="/withdraw" element={<ProtectedAccountRoute><WithdrawPage /></ProtectedAccountRoute>} />
+    <Route path="/convert" element={<ProtectedAccountRoute><InternalConversionPage /></ProtectedAccountRoute>} />
     <Route path="/address-book" element={<ProtectedAccountRoute><AddressBookPage /></ProtectedAccountRoute>} />
     <Route path="/fund-password" element={<ProtectedAccountRoute><FundPasswordPage /></ProtectedAccountRoute>} />
     <Route path="/earn" element={<EarnPage />} />
