@@ -1884,5 +1884,9 @@
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "El resultado no está confirmado. Actualiza tus saldos y consulta el historial antes de volver a intentarlo.",
   "Conversion completed.": "Conversión completada.",
   "This conversion was already processed.": "Esta conversión ya se ha procesado.",
-  "Loading wallet balances…": "Cargando saldos de la cartera…"
+  "Loading wallet balances…": "Cargando saldos de la cartera…",
+  "No address saved for this asset": "No hay una dirección guardada para este activo",
+  "No saved withdrawal address for this asset.": "No hay una dirección de retiro guardada para este activo.",
+  "Add withdrawal address": "Añadir dirección de retiro",
+  "No available withdrawal asset. Please contact support.": "No hay activos disponibles para retirar. Contacta con soporte."
 }
