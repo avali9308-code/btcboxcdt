@@ -2856,8 +2856,9 @@ async function handleRequest(event, context) {
     if (!quote || quote.uid !== String(user.uid) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(quote.quote_id || '') || !/^[A-Z0-9]{2,16}$/.test(quote.from_asset || '') ||
         !/^[A-Z0-9]{2,16}$/.test(quote.to_asset || '') || quote.from_asset === quote.to_asset ||
         parseMoneyInput(String(quote.from_amount || '')) === null || parseMoneyInput(String(quote.to_amount || '')) === null ||
-        parseMoneyInput(String(quote.rate || '')) === null || !Number.isSafeInteger(quote.expires_at) ||
-        quote.expires_at < Date.now() || quote.expires_at > Date.now() + 31000) {
+        parseMoneyInput(String(quote.rate || '')) === null || !Number.isSafeInteger(quote.issued_at) ||
+        !Number.isSafeInteger(quote.expires_at) || quote.expires_at !== quote.issued_at + 30000 ||
+        quote.issued_at > Date.now() + 1000 || quote.issued_at < Date.now() - 86400000) {
       return json({ ok: false, code: 'CONVERSION_QUOTE_EXPIRED', msg: 'The conversion quote has expired. Request a new quote.' }, 409);
     }
     if (!financialWritesEnabled() || !supabaseStorageConfigured()) {
@@ -2875,16 +2876,19 @@ async function handleRequest(event, context) {
           p_request_id: requestId, p_quote_id: quote.quote_id, p_user_id: String(user.uid),
           p_from_asset: quote.from_asset, p_to_asset: quote.to_asset,
           p_from_amount: quote.from_amount, p_to_amount: quote.to_amount,
-          p_quote_rate: quote.rate, p_request_hash: requestHash,
+          p_quote_rate: quote.rate, p_quote_expires_at: quote.expires_at, p_request_hash: requestHash,
           p_metadata: { quote_id: quote.quote_id, quote_issued_at: quote.issued_at, quote_expires_at: quote.expires_at }
         }),
         signal: AbortSignal.timeout(8000)
       });
       const result = await rpc.json().catch(() => null);
       if (!rpc.ok || !result || result.ok !== true || typeof result.duplicate !== 'boolean') {
-        const insufficient = /insufficient funds/i.test(JSON.stringify(result || {}));
-        return json({ ok: false, code: insufficient ? 'INSUFFICIENT_FUNDS' : 'CONVERSION_NOT_CONFIRMED',
-          msg: insufficient ? 'Insufficient available balance. No conversion was made.' : 'The conversion was not confirmed. Check your asset balances before retrying.' }, insufficient ? 400 : 503);
+        const rpcErrorText = JSON.stringify(result || {});
+        const insufficient = /insufficient funds/i.test(rpcErrorText);
+        const expired = /conversion quote expired/i.test(rpcErrorText);
+        const usedQuote = /conversion quote already used/i.test(rpcErrorText);
+        return json({ ok: false, code: insufficient ? 'INSUFFICIENT_FUNDS' : expired ? 'CONVERSION_QUOTE_EXPIRED' : usedQuote ? 'CONVERSION_QUOTE_USED' : 'CONVERSION_NOT_CONFIRMED',
+          msg: insufficient ? 'Insufficient available balance. No conversion was made.' : expired ? 'The conversion quote has expired. Request a new quote.' : usedQuote ? 'This conversion quote has already been used. Request a new quote.' : 'The conversion was not confirmed. Check your asset balances before retrying.' }, insufficient ? 400 : expired || usedQuote ? 409 : 503);
       }
       return json({ ok: true, duplicate: result.duplicate, operation_id: result.operation_id,
         from_asset: quote.from_asset, to_asset: quote.to_asset,
