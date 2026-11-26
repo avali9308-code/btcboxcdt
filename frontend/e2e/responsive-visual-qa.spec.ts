@@ -80,6 +80,68 @@ async function installVisualApiMocks(page: Page) {
       }
       return;
     }
+    if (pathname === "/api/deposit" && route.request().method() === "POST") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, address: "TQ9xE2EVisualFixtureAddress000000000000" }),
+      });
+      return;
+    }
+    if (pathname === "/api/addresses" && route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          addresses: [{
+            id: "visual-qa-withdrawal-address",
+            type: "crypto",
+            coin: "USDT",
+            network: "TRC20",
+            address: "TQ9xE2EVisualFixtureAddress000000000000",
+            blocked: false,
+            unbound: false,
+          }],
+        }),
+      });
+      return;
+    }
+    if (pathname === "/api/addresses/select") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          address: "TQ9xE2EVisualFixtureAddress000000000000",
+          coin: "USDT",
+          network: "TRC20",
+        }),
+      });
+      return;
+    }
+    if (pathname === "/api/withdrawal/config") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          actions_enabled: true,
+          fees: { USDT: "1", USDC: "1" },
+          allowed_networks: { USDT: ["TRC20"], USDC: ["ERC20"] },
+          usdc_usdt_rate: "1",
+        }),
+      });
+      return;
+    }
+    if (pathname === "/api/withdrawal/history") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true, withdrawals: [], has_more: false, next_cursor: null }),
+      });
+      return;
+    }
     if (pathname === "/api/perpetual/markets") {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, markets: [{ symbol: "BTCUSDT", base_asset: "BTC", quote_asset: "USDT", status: "trading", max_leverage: 100, price_tick: "0.01", quantity_step: "0.000001", min_quantity: "0.000001", funding_interval_sec: 28800, funding_rate_cap: 0.0075, mark_price: "65000", index_price: "65000" }] }) });
       return;
@@ -734,6 +796,34 @@ for (const route of routes) {
     }
   });
 }
+
+test("funds workflows render usable deposit and withdrawal states", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installVisualApiMocks(page);
+
+  await page.goto("/deposit", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
+  await expect(page.getByLabel("Asset")).toHaveValue("USDT");
+  await expect(page.getByLabel("Network")).toHaveValue("TRC20");
+  await expect(page.getByText("TQ9xE2EVisualFixtureAddress000000000000")).toBeVisible();
+  const copyButton = page.getByRole("button", { name: "Copy address" });
+  await expect(copyButton).toBeEnabled();
+  await copyButton.click();
+  await expect(page.getByRole("status").filter({ hasText: "Deposit address copied." })).toBeVisible();
+
+  await page.goto("/withdraw", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Withdraw" })).toBeVisible();
+  await expect(page.getByLabel("Withdrawal address")).toBeVisible();
+  await expect(page.getByText("Selected destination: USDT · TRC20")).toBeVisible();
+  await expect(page.getByText("Available", { exact: true })).toBeVisible();
+  await expect(page.getByText("Withdrawal fee", { exact: true })).toBeVisible();
+  const amount = page.getByLabel(/Amount/);
+  await amount.fill("10");
+  await page.getByLabel("Fund password").fill("visual-only-password");
+  await expect(page.getByRole("button", { name: "Submit withdrawal" })).toBeEnabled();
+  // The visual fixture must never submit a financial operation.
+});
 
 test("trade interaction QA mobile spot market selection and order-book handoff", async ({ page }) => {
   test.skip(test.info().project.name !== "mobile-chromium", "Trade interaction QA runs in the mobile touch project.");
