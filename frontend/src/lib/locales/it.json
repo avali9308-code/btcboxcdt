@@ -1876,7 +1876,7 @@
   "Exchange rate": "Tasso di cambio",
   "You will receive": "Riceverai",
   "Quote valid for 30 seconds. The rate is locked until expiry.": "Il preventivo è valido per 30 secondi. Il tasso resta bloccato fino alla scadenza.",
-  "The conversion quote has expired. Request a new quote.": "Il preventivo è scaduto. Richiedine uno nuovo.",
+  "The conversion quote has expired. Request a new quote.": "Il preventivo di conversione è scaduto. Richiedine uno nuovo.",
   "Get quote": "Ottieni preventivo",
   "Confirm conversion": "Conferma conversione",
   "Conversions are final once confirmed. Check the assets and amount before proceeding.": "Le conversioni confermate sono definitive. Controlla asset e importo prima di procedere.",
@@ -1889,5 +1889,13 @@
   "No saved withdrawal address for this asset.": "Non è stato salvato alcun indirizzo di prelievo per questo asset.",
   "Add withdrawal address": "Aggiungi indirizzo di prelievo",
   "No available withdrawal asset. Please contact support.": "Nessun asset disponibile per il prelievo. Contatta l'assistenza.",
-  "This conversion quote has already been used. Request a new quote.": "Questo preventivo di conversione è già stato utilizzato. Richiedine uno nuovo."
+  "This conversion quote has already been used. Request a new quote.": "Questo preventivo è già stato utilizzato. Richiedine uno nuovo.",
+  "Conversion fee": "Commissione di conversione",
+  "Internal conversion is not available yet. No assets were moved.": "La conversione interna non è ancora disponibile. Nessun asset è stato movimentato.",
+  "One of the selected assets is not enabled for conversion.": "Uno degli asset selezionati non è abilitato alla conversione.",
+  "The amount exceeds the source asset precision.": "L'importo supera la precisione supportata per l'asset di origine.",
+  "The converted amount is below the supported precision.": "L'importo convertito è inferiore alla precisione supportata.",
+  "Insufficient available balance. No conversion was made.": "Saldo disponibile insufficiente. Nessuna conversione è stata eseguita.",
+  "This request ID was already used for a different conversion.": "Questo ID richiesta è già stato utilizzato per un'altra conversione.",
+  "The conversion was not confirmed. Check your asset balances before retrying.": "La conversione non è stata confermata. Controlla i saldi e la cronologia prima di riprovare."
 }
