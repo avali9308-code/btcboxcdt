@@ -167,7 +167,7 @@ export function AssetsPage() {
             </div>
           )}
           {/* Funds are grouped into one clear entry; deposit and withdrawal remain separate on the next page. */}
-          <div className="relative grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[340px]">
+          <div className="relative grid w-full grid-cols-1 gap-2 sm:w-auto sm:min-w-[340px] sm:grid-cols-2">
             <Button asChild className="min-h-11 text-sm font-bold"><Link to="/funds"><span className="flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4"/><ArrowUpFromLine className="h-4 w-4"/></span>{t("Deposit / Withdraw")}</Link></Button>
             <Button asChild variant="outline" className="min-h-11 text-sm font-bold"><Link to="/earn"><Sprout className="h-4 w-4"/>{t("Earn")}</Link></Button>
           </div>
