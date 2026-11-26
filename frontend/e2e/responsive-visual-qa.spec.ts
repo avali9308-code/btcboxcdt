@@ -339,7 +339,7 @@ async function assertPageAtWidth(
     // the ticker header's market selector is its visible pair identifier.
     await expect(page.locator(".term-top-pair")).toBeVisible({ timeout: 15000 });
   } else {
-    await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("h1").filter({ hasText: route.heading })).toBeVisible({ timeout: 15000 });
   }
 
   if (["/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/me"].includes(route.path)) {
@@ -826,11 +826,14 @@ test("order history progressive rendering works on mobile and desktop", async ({
 
   await page.goto("/orders", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
-  await expect(page.getByText("order-20", { exact: true })).toBeVisible();
-  await expect(page.getByText("order-21", { exact: true })).toHaveCount(0);
+  const firstOrderId = page.viewportSize()!.width < 768 ? page.locator(".md\\:hidden").getByText("order-20", { exact: true }) : page.locator("tbody").getByText("order-20", { exact: true });
+  await expect(firstOrderId).toBeVisible();
+  const twentyFirstOrderId = page.viewportSize()!.width < 768 ? page.locator(".md\\:hidden").getByText("order-21", { exact: true }) : page.locator("tbody").getByText("order-21", { exact: true });
+  await expect(twentyFirstOrderId).toHaveCount(0);
   await page.getByRole("button", { name: /Show more/ }).click();
-  await expect(page.getByText("order-21", { exact: true })).toBeVisible();
-  await expect(page.getByText("order-25", { exact: true })).toBeVisible();
+  await expect(twentyFirstOrderId).toBeVisible();
+  const lastOrderId = page.viewportSize()!.width < 768 ? page.locator(".md\\:hidden").getByText("order-25", { exact: true }) : page.locator("tbody").getByText("order-25", { exact: true });
+  await expect(lastOrderId).toBeVisible();
   await expect(page.getByRole("button", { name: /Show more/ })).toHaveCount(0);
 });
 
@@ -862,7 +865,7 @@ test("account and home navigation preserve safe return destinations", async ({ p
   await page.locator('a[aria-label="Back"]').click();
   await expect(page).toHaveURL(/\/me$/);
 
-  await page.locator('a[href="/support"]').click();
+  await page.getByRole("main").getByRole("link", { name: "Support" }).click();
   await expect(page.getByRole("heading", { name: "Customer support" })).toBeVisible();
   await page.locator('button[aria-label="Back"]').click();
   await expect(page).toHaveURL(/\/me$/);
