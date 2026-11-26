@@ -55,7 +55,7 @@ function localizedFailure(reason: unknown, fallbackKey: string) {
 }
 export function PageFrame({eyebrow,title,description,children,className="",tone,backTo,action,onBack}:{eyebrow?:string;title:string;description?:string;children:ReactNode;className?:string;tone:PageFrameTone;backTo?:string;action?:ReactNode;onBack?:()=>void}){
  const {t}=useI18n();
- return <div className={`${className} tone-${tone} mx-auto flex w-full max-w-[1520px] min-w-0 flex-col gap-5 p-3 sm:p-4 md:p-6 lg:p-8`}><div className="flex min-w-0 items-center justify-between gap-3">{onBack?<button type="button" onClick={onBack} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-border text-brand-text-muted transition-colors hover:border-brand-accent/40 hover:text-brand-text" aria-label={t("Back")}><ArrowLeft className="h-4 w-4"/></button>:backTo?<Link to={backTo} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-border text-brand-text-muted transition-colors hover:border-brand-accent/40 hover:text-brand-text" aria-label={t("Back")}><ArrowLeft className="h-4 w-4"/></Link>:null}<h1 className="type-page-title min-w-0 truncate text-brand-text">{t(title)}</h1>{action}</div>{children}</div>;
+ return <div className={`${className} tone-${tone} mx-auto flex w-full max-w-[1520px] min-w-0 flex-col gap-5 p-3 sm:p-4 md:p-6 lg:p-8`}><div className={`flex min-w-0 items-center gap-3 ${className.includes("funds-flow-page")?"justify-start":"justify-between"}`}>{onBack?<button type="button" onClick={onBack} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-border text-brand-text-muted transition-colors hover:border-brand-accent/40 hover:text-brand-text" aria-label={t("Back")}><ArrowLeft className="h-4 w-4"/></button>:backTo?<Link to={backTo} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-border text-brand-text-muted transition-colors hover:border-brand-accent/40 hover:text-brand-text" aria-label={t("Back")}><ArrowLeft className="h-4 w-4"/></Link>:null}<h1 className="type-page-title min-w-0 truncate text-brand-text">{t(title)}</h1>{action}</div>{children}</div>;
 }
 /**
  * Displays the TradeHub service directory and its available product entry points.
@@ -1203,8 +1203,8 @@ export function FundsPage(){
   {title:"Deposit",description:"Deposit address",to:"/deposit",icon:ArrowDownToLine},
   {title:"Withdraw",description:"Submit withdrawal",to:"/withdraw",icon:ArrowUpFromLine},
  ];
- return <PageFrame title="Funds" tone="assets" backTo="/assets">
-  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+ return <PageFrame title="Funds" tone="assets" backTo="/assets" className="funds-flow-page">
+  <div className="mx-auto grid w-full max-w-3xl min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
    {services.map(({title,description,to,icon:Icon})=><Link key={to} to={to} className="group flex min-w-0 items-center gap-4 rounded-xl border border-white/[0.08] bg-brand-surface p-5 transition-colors hover:border-brand-accent/40 hover:bg-brand-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent sm:p-6">
     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Icon className="h-5 w-5"/></span>
     <span className="min-w-0 flex-1"><span className="block text-base font-semibold text-brand-text">{t(title)}</span><span className="mt-1 block text-sm text-brand-text-muted">{t(description)}</span></span>
@@ -1266,7 +1266,8 @@ export function DepositPage(){
  },[]);
  const changeCoin=(next:string)=>{setAddress("");setError("");setCopyMessage("");setCoin(next);setNetwork(depositNetworks[next][0]);};
  const changeNetwork=(next:string)=>{setAddress("");setError("");setCopyMessage("");setNetwork(next);};
- return <PageFrame title="Deposit" tone="assets" backTo="/funds">
+ return <PageFrame title="Deposit" tone="assets" backTo="/funds" className="funds-flow-page">
+  <div className="mx-auto w-full max-w-3xl space-y-5">
   <Card className="relative overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"><span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-brand-surface"/><CardHeader className="border-b border-brand-border bg-brand-surface"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Wallet className="h-5 w-5"/></span><div><CardTitle>{t("Deposit address")}</CardTitle></div></div></CardHeader><CardContent className="space-y-5 p-4 sm:p-6">
    <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Asset")}</span><select value={coin} onChange={e=>changeCoin(e.target.value)} className="h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 px-3 py-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15">{Object.keys(depositNetworks).map(x=><option key={x}>{x}</option>)}</select></label><label className="space-y-1.5 text-sm"><span className="text-brand-text-muted">{t("Network")}</span><select value={network} onChange={e=>changeNetwork(e.target.value)} className="h-12 w-full rounded-xl border border-brand-border bg-brand-surface-2 p-3 text-sm text-brand-text outline-none transition-colors focus:border-brand-accent/60 focus:ring-2 focus:ring-brand-accent/15">{depositNetworks[coin].map(x=><option key={x}>{x}</option>)}</select></label></div>
    {loading?<p className="rounded-xl border border-brand-border p-4 text-sm text-brand-text-muted" role="status">{t("Loading configured deposit address…")}</p>
@@ -1280,6 +1281,7 @@ export function DepositPage(){
    :depositHistory.length?depositHistory.map((item,index)=><div key={item.id||`${item.time||"deposit"}-${item.coin}-${index}`} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-brand-border bg-brand-surface-2/40 p-4 transition-colors hover:bg-brand-surface-2/70"><div className="min-w-0"><p className="font-semibold">{item.amount} {item.coin} · {item.network||"—"}</p><p className="mt-1 text-xs text-brand-text-muted">{item.time||"—"}</p>{item.reference||item.txid?<p className="mt-1 break-all text-xs text-brand-text-muted">{t("Reference")}: {item.reference||item.txid}</p>:null}</div><Badge variant={depositStatusBadgeVariant(normalizeDepositStatus(item.status))}>{depositStatusLabel(normalizeDepositStatus(item.status), t)}</Badge></div>)
    :<p className="rounded-xl border border-dashed border-brand-border p-5 text-sm text-brand-text-muted">{t("No deposit history yet.")}</p>}
   </CardContent></Card>
+  </div>
  </PageFrame>;
 }
 
@@ -1564,7 +1566,7 @@ export function WithdrawPage(){
   }catch{setHistoryError("Withdrawal history is temporarily unavailable.");}
   finally{setHistoryLoading(false);}
  };
- return <PageFrame title="Withdraw" tone="assets" backTo="/funds">
+ return <PageFrame title="Withdraw" tone="assets" backTo="/funds" className="funds-flow-page">\n  <div className="mx-auto w-full max-w-3xl space-y-5">
   {loading?<Card className="border-brand-border bg-brand-surface"><CardContent className="p-5 text-sm text-brand-text-muted" role="status">{t("Loading wallet and saved addresses…")}</CardContent></Card>
   :needsSignIn&&!DEV_OPEN_ACCOUNT_PAGES?<Card className="border-brand-border bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-xs text-brand-text-muted">{t("Please sign in to view your account data")}</p><Button asChild size="sm" className="h-10"><Link to="/login">{t("Go to sign in")}</Link></Button></CardContent></Card>
   :error&&!account?<Card className="border-brand-danger/30 bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-5"><p className="text-sm text-brand-danger" role="alert">{t(error)}</p><Button size="sm" variant="outline" onClick={()=>setReload(n=>n+1)}>{t("Try again")}</Button></CardContent></Card>
@@ -1629,5 +1631,6 @@ export function WithdrawPage(){
 
    
   </>}
+  </div>
  </PageFrame>;
 }
