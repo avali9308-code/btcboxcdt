@@ -1884,5 +1884,9 @@
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "交換結果を確認できません。残高を更新し、履歴を確認してから再試行してください。",
   "Conversion completed.": "交換が完了しました。",
   "This conversion was already processed.": "この交換はすでに処理されています。",
-  "Loading wallet balances…": "ウォレット残高を読み込み中…"
+  "Loading wallet balances…": "ウォレット残高を読み込み中…",
+  "No address saved for this asset": "この資産の出金アドレスは保存されていません",
+  "No saved withdrawal address for this asset.": "この資産の保存済み出金アドレスはありません。",
+  "Add withdrawal address": "出金アドレスを追加",
+  "No available withdrawal asset. Please contact support.": "出金可能な資産がありません。サポートにお問い合わせください。"
 }
