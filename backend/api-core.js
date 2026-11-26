@@ -2861,42 +2861,10 @@ async function handleRequest(event, context) {
         quote.issued_at > Date.now() + 1000 || quote.issued_at < Date.now() - 86400000) {
       return json({ ok: false, code: 'CONVERSION_QUOTE_EXPIRED', msg: 'The conversion quote has expired. Request a new quote.' }, 409);
     }
-    if (!financialWritesEnabled() || !supabaseStorageConfigured()) {
-      return json({ ok: false, code: 'FINANCIAL_CUTOVER_INCOMPLETE', msg: 'The financial ledger is not ready. No conversion was made.' }, 503);
-    }
-    const requestHash = crypto.createHash('sha256').update([
-      String(user.uid), quote.from_asset, quote.to_asset, quote.from_amount,
-      quote.to_amount, quote.rate, String(quote.issued_at), String(quote.expires_at)
-    ].join('|')).digest('hex');
-    try {
-      const base = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
-      const rpc = await fetch(base + '/rest/v1/rpc/apply_internal_conversion_atomic', {
-        method: 'POST', headers: supabaseHeaders(),
-        body: JSON.stringify({
-          p_request_id: requestId, p_quote_id: quote.quote_id, p_user_id: String(user.uid),
-          p_from_asset: quote.from_asset, p_to_asset: quote.to_asset,
-          p_from_amount: quote.from_amount, p_to_amount: quote.to_amount,
-          p_quote_rate: quote.rate, p_quote_expires_at: quote.expires_at, p_request_hash: requestHash,
-          p_metadata: { quote_id: quote.quote_id, quote_issued_at: quote.issued_at, quote_expires_at: quote.expires_at }
-        }),
-        signal: AbortSignal.timeout(8000)
-      });
-      const result = await rpc.json().catch(() => null);
-      if (!rpc.ok || !result || result.ok !== true || typeof result.duplicate !== 'boolean') {
-        const rpcErrorText = JSON.stringify(result || {});
-        const insufficient = /insufficient funds/i.test(rpcErrorText);
-        const expired = /conversion quote expired/i.test(rpcErrorText);
-        const usedQuote = /conversion quote already used/i.test(rpcErrorText);
-        return json({ ok: false, code: insufficient ? 'INSUFFICIENT_FUNDS' : expired ? 'CONVERSION_QUOTE_EXPIRED' : usedQuote ? 'CONVERSION_QUOTE_USED' : 'CONVERSION_NOT_CONFIRMED',
-          msg: insufficient ? 'Insufficient available balance. No conversion was made.' : expired ? 'The conversion quote has expired. Request a new quote.' : usedQuote ? 'This conversion quote has already been used. Request a new quote.' : 'The conversion was not confirmed. Check your asset balances before retrying.' }, insufficient ? 400 : expired || usedQuote ? 409 : 503);
-      }
-      return json({ ok: true, duplicate: result.duplicate, operation_id: result.operation_id,
-        from_asset: quote.from_asset, to_asset: quote.to_asset,
-        from_amount: quote.from_amount, to_amount: quote.to_amount, rate: quote.rate });
-    } catch (_) {
-      return json({ ok: false, code: 'CONVERSION_RESULT_UNCONFIRMED',
-        msg: 'The conversion result is unconfirmed. Refresh your balances and check operation history before retrying.' }, 503);
-    }
+    // The live database has no approved atomic two-asset conversion RPC.
+    // Never attempt two separate balance writes or create a missing RPC implicitly.
+    return json({ ok: false, code: 'CONVERSION_NOT_ENABLED',
+      msg: 'Internal conversion is not available yet. No assets were moved.' }, 503);
   }
 
   // ---------- GET /api/withdrawal/config ----------
