@@ -890,10 +890,10 @@ test("deposit and withdrawal workflows render usable states", async ({ page, con
 
   await page.goto("/assets", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Deposit / Withdraw" }).click();
-  await expect(page).toHaveURL(/\\/funds$/);
+  await expect(page).toHaveURL(/\/funds$/);
   await expect(page.getByRole("heading", { name: "Funds" })).toBeVisible();
   await page.getByRole("link", { name: /Deposit Deposit address/ }).click();
-  await expect(page).toHaveURL(/\\/deposit$/);
+  await expect(page).toHaveURL(/\/deposit$/);
   await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
   await expect(page.getByLabel("Asset")).toHaveValue("USDT");
@@ -905,9 +905,9 @@ test("deposit and withdrawal workflows render usable states", async ({ page, con
   await expect(page.getByRole("status").filter({ hasText: "Deposit address copied." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back" }).click();
-  await expect(page).toHaveURL(/\\/funds$/);
+  await expect(page).toHaveURL(/\/funds$/);
   await page.getByRole("link", { name: /Withdraw Submit withdrawal/ }).click();
-  await expect(page).toHaveURL(/\\/withdraw$/);
+  await expect(page).toHaveURL(/\/withdraw$/);
   await expect(page.getByRole("heading", { name: "Withdraw" })).toBeVisible();
   await expect(page.getByLabel("Withdrawal address")).toBeVisible();
   await expect(page.getByText("Selected destination: USDT · TRC20")).toBeVisible();
