@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "Chưa lưu địa chỉ rút tiền cho tài sản này",
   "No saved withdrawal address for this asset.": "Chưa có địa chỉ rút tiền được lưu cho tài sản này.",
   "Add withdrawal address": "Thêm địa chỉ rút tiền",
-  "No available withdrawal asset. Please contact support.": "Hiện không có tài sản nào hỗ trợ rút tiền. Vui lòng liên hệ hỗ trợ."
+  "No available withdrawal asset. Please contact support.": "Hiện không có tài sản nào hỗ trợ rút tiền. Vui lòng liên hệ hỗ trợ.",
+  "This conversion quote has already been used. Request a new quote.": "Báo giá chuyển đổi này đã được sử dụng. Vui lòng lấy báo giá mới."
 }
