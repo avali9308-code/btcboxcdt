@@ -1883,5 +1883,6 @@
   "Live conversion prices are temporarily unavailable.": "リアルタイム交換価格は一時的に利用できません。",
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "交換結果を確認できません。残高を更新し、履歴を確認してから再試行してください。",
   "Conversion completed.": "交換が完了しました。",
-  "This conversion was already processed.": "この交換はすでに処理されています。"
+  "This conversion was already processed.": "この交換はすでに処理されています。",
+  "Loading wallet balances…": "ウォレット残高を読み込み中…"
 }
