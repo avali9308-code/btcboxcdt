@@ -6,7 +6,7 @@
 
 - This is an additive upgrade to an already-existing BTCBOX Supabase schema.
 - Do not create a database, reset a project, run the empty-database bootstrap, or run the Docker initialization script.
-- The SQL creates one quote-claim table, replaces the existing financial-operation type check with the reviewed current allowlist plus `asset_conversion`, and adds one service-role-only RPC.
+- The SQL creates one quote-claim table, extends the existing financial-operation type check using its live PostgreSQL expression, adding only `asset_conversion` and preserving every currently permitted operation type, and adds one service-role-only RPC.
 - It does not backfill, recalculate, transfer, freeze, or otherwise update existing user balances or historical ledger rows.
 - Applying the SQL does not enable customer conversions. The API requires `FINANCIAL_INTERNAL_CONVERSION_ENABLED=1`, in addition to the existing financial-write and Supabase storage gates. Keep it unset/off until a separate operational approval and end-to-end verification.
 
@@ -14,7 +14,7 @@
 
 1. Take and verify a current Supabase backup. Confirm restore access.
 2. Confirm this is the intended existing BTCBOX project and that the current application commit is the reviewed PR head.
-3. Read the current live operation-type constraint and compare it with the migration preflight. The migration deliberately aborts if the expected existing constraint or the reviewed perpetual operation values are missing.
+3. Read the current live operation-type constraint and compare it with the migration preflight. The migration deliberately aborts if the expected existing constraint is missing; it reads and preserves the exact live allowlist rather than relying on a copied list.
 4. Confirm `public.financial_accounts`, `public.financial_operations`, `public.financial_ledger`, and `public.btcbox_assets` already exist.
 5. Do not proceed if there are schema differences, pending financial incidents, or any uncertainty about the backup.
 
