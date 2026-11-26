@@ -1,7 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { AuthRestoreState } from "../../components/AuthRestoreState";
 import { multiplyDecimalStrings, multiplyDecimalStringsCeil, addDecimalStrings, divideDecimalStrings, compareDecimalStrings, isDecimalMultipleOfStep, addDecimalStep, floorDecimalToStep, roundDecimalToStep } from "../../lib/decimal";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { RefreshCw, TrendingUp, TrendingDown, Clock3, ShieldAlert, ArrowLeft, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight, KeyRound, Copy, Check, Plus, Minus, History, WifiOff, Search } from "lucide-react";
 import { ApiError, getAccount, getOrders, getMarkets, getSpotMarketPairs, getKlines, getOrderBook, getUsdtUsdRate, getTradingStatus, submitSpotOrder, cancelSpotOrder, getDepositAddress, getSavedCryptoAddresses, getWithdrawalConfig, getWithdrawalHistoryPage, submitWithdrawal, getEarnCatalog, submitEarnAction, getSupportUnread, type EarnProduct, type EarnPosition, type SavedCryptoAddress, type AccountBalance, type AccountSnapshot, type DepositRecord, type OrderRecord, type MarketTicker, type SpotMarketPair, type MarketCandle, type OrderBookSnapshot, type TradingStatus, type WithdrawalConfig, type WithdrawalRecord, submitKyc } from "../../lib/api";
@@ -1292,6 +1292,9 @@ export function DepositPage(){
  */
 export function EarnPage(){
  const {t,language}=useI18n();
+ const location=useLocation();
+ const earnFrom=(location.state as {from?:string}|null)?.from;
+ const earnBackTo=typeof earnFrom==="string" && /^\/(assets|me|markets|trade-hub|seconds|contract|trade\/[^/]+)$/.test(earnFrom) ? earnFrom : "/seconds";
  const {status}=useAuth();
  const {openAuthDialog}=useAuthDialog();
  const signedOut=status!=="authenticated";
@@ -1370,7 +1373,7 @@ export function EarnPage(){
    setError(localizedFailure(reason,"Unable to confirm the Earn operation. Check Earn history before retrying."));
   }finally{setBusy(false);}
  };
- return <PageFrame title="Earn" tone="earn" backTo="/assets">
+ return <PageFrame title="Earn" tone="earn" backTo={earnBackTo}>
   <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-success/10 text-brand-success"><Sprout className="h-4 w-4"/></span><div><p className="text-sm font-semibold text-brand-text">{t("BTCBOX Earn")}</p></div></div></div>
   {loading?<Card aria-busy={loading} className="border-brand-border bg-brand-surface"><CardContent className="space-y-3 p-5" role="status"><div className="h-4 w-1/3 animate-pulse rounded bg-brand-surface-2"/><div className="grid gap-3 sm:grid-cols-3"><div className="h-20 animate-pulse rounded-xl bg-brand-surface-2"/><div className="h-20 animate-pulse rounded-xl bg-brand-surface-2"/><div className="h-20 animate-pulse rounded-xl bg-brand-surface-2"/></div><p className="text-sm text-brand-text-muted">{t("Loading Earn products and positions…")}</p></CardContent></Card>
   :<>
