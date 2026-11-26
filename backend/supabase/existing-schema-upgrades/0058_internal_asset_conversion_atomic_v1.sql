@@ -171,6 +171,17 @@ BEGIN
     );
   END IF;
 
+  -- Hold active asset-registry rows in the same deterministic order so an
+  -- administrator cannot disable or change precision mid-conversion.
+  FOR v_locked_asset IN
+    SELECT asset_code FROM public.btcbox_assets
+    WHERE asset_code IN (p_from_asset,p_to_asset) AND active=true
+    ORDER BY asset_code
+    FOR SHARE
+  LOOP
+    NULL;
+  END LOOP;
+
   SELECT decimals INTO v_from_decimals
   FROM public.btcbox_assets
   WHERE asset_code=p_from_asset AND active=true;
