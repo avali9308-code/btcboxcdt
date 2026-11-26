@@ -110,8 +110,8 @@ BEGIN
      OR p_from_asset IS NULL OR p_from_asset !~ '^[A-Z0-9]{2,16}$'
      OR p_to_asset IS NULL OR p_to_asset !~ '^[A-Z0-9]{2,16}$'
      OR p_from_asset = p_to_asset
-     OR p_from_amount IS NULL OR p_from_amount <= 0
-     OR p_to_amount IS NULL OR p_to_amount <= 0
+     OR p_from_amount IS NULL OR p_from_amount <= 0 OR p_from_amount >= 100000000000000000000
+     OR p_to_amount IS NULL OR p_to_amount <= 0 OR p_to_amount >= 100000000000000000000
      OR p_quote_rate IS NULL OR p_quote_rate <= 0
      OR p_quote_expires_at IS NULL OR p_quote_expires_at <= 0
      OR p_request_hash IS NULL OR p_request_hash !~ '^[0-9a-f]{64}$'
