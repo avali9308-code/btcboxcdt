@@ -30,7 +30,8 @@ test('every active backend PostgREST RPC call has a canonical SQL function defin
   const missing = [...activeCalls].filter((name) => !declared.has(name)).sort();
   assert.deepEqual(missing, [], 'active API calls without a canonical SQL definition');
   assert.ok(activeCalls.size >= 20, 'RPC inventory unexpectedly shrank; review route/source coverage');
-  assert.match(api, /Internal conversion is not available yet\. No assets were moved\./,\n    'internal conversion must fail closed until an atomic operation is approved in the existing database');
+  assert.match(api, /Internal conversion is not available yet\. No assets were moved\./,
+    'internal conversion must fail closed until an atomic operation is approved in the existing database');
 });
 
 test('withdrawal creation API and canonical SQL agree on the 11-argument fee-snapshot contract', () => {
