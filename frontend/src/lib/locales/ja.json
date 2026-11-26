@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "出金履歴はありません。",
   "Funds": "資金管理",
   "Withdrawals are currently unavailable.": "現在、出金をご利用いただけません。",
-  "Show more": "さらに表示"
+  "Show more": "さらに表示",
+  "Saved withdrawal address security notice": "セキュリティ保護のため、保存済みの出金先アドレスは編集・削除できません。変更が必要な場合はサポートまでお問い合わせください。"
 }
