@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "Aún no hay historial de retiros.",
   "Funds": "Fondos",
   "Withdrawals are currently unavailable.": "Los retiros no están disponibles actualmente.",
-  "Show more": "Mostrar más"
+  "Show more": "Mostrar más",
+  "Saved withdrawal address security notice": "Por seguridad, las direcciones de retiro guardadas no se pueden editar ni eliminar. Contacta con soporte si necesitas cambiarlas."
 }
