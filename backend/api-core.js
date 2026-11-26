@@ -2913,7 +2913,8 @@ async function handleRequest(event, context) {
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || !result || result.ok !== true || typeof result.operation_id !== 'string' ||
-          result.from_available == null || result.to_available == null ||\n          parseMoneyInput(String(result.from_available)) === null || parseMoneyInput(String(result.to_available)) === null) {
+          result.from_available == null || result.to_available == null ||
+          parseMoneyInput(String(result.from_available)) === null || parseMoneyInput(String(result.to_available)) === null) {
         const detail = JSON.stringify(result || {});
         const insufficient = /insufficient funds/i.test(detail);
         const expired = /conversion quote expired/i.test(detail);
