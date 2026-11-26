@@ -1889,5 +1889,13 @@
   "No saved withdrawal address for this asset.": "该币种暂无已保存的提现地址。",
   "Add withdrawal address": "添加提现地址",
   "No available withdrawal asset. Please contact support.": "当前没有可用的提现币种，请联系客服。",
-  "This conversion quote has already been used. Request a new quote.": "此兑换报价已使用，请重新获取报价。"
+  "This conversion quote has already been used. Request a new quote.": "此兑换报价已使用，请重新获取报价。",
+  "Conversion fee": "兑换手续费",
+  "Internal conversion is not available yet. No assets were moved.": "内部兑换暂未开放，资产没有发生变动。",
+  "One of the selected assets is not enabled for conversion.": "所选币种暂不支持兑换。",
+  "The amount exceeds the source asset precision.": "输入数量超过该币种支持的精度。",
+  "The converted amount is below the supported precision.": "兑换后的数量低于支持的最小精度。",
+  "Insufficient available balance. No conversion was made.": "可用余额不足，未执行兑换。",
+  "This request ID was already used for a different conversion.": "此请求编号已用于其他兑换，请重新发起。",
+  "The conversion was not confirmed. Check your asset balances before retrying.": "兑换结果尚未确认，请刷新资产余额并检查记录后再重试。"
 }
