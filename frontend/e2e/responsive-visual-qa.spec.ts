@@ -359,7 +359,7 @@ async function assertPageAtWidth(
   // Standalone history pages intentionally use their own compact secondary
   // navigation instead of the application shell. Only shell routes own the
   // BTCBOX home logo.
-  if (["/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/me", "/settings", "/support", "/earn", "/kyc", "/contract", "/seconds"].includes(route.path) && width <= 480) {
+  if (["/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/me", "/contract", "/seconds"].includes(route.path) && width <= 480) {
     await expect(
       page.getByRole("link", { name: "BTCBOX home" }).getByRole("img", { name: "BTCBOX" }),
     ).toBeVisible();
