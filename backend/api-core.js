@@ -2899,7 +2899,7 @@ async function handleRequest(event, context) {
       rate: quote.rate, expires_at: quote.expires_at
     })).digest('hex');
     try {
-      const response = await fetch(process.env.SUPABASE_URL.replace(/\\/+$/, '') + '/rest/v1/rpc/apply_internal_conversion_atomic', {
+      const response = await fetch(process.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/apply_internal_conversion_atomic', {
         method: 'POST', headers: supabaseHeaders(),
         body: JSON.stringify({
           p_request_id: requestId, p_quote_id: quote.quote_id, p_user_id: String(user.uid),
