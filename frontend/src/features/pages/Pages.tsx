@@ -1205,15 +1205,11 @@ export function FundsPage(){
  ];
  return <PageFrame title="Funds" tone="assets" backTo="/assets">
   <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-   {services.map(({title,description,to,icon:Icon})=><Card key={to} className="border border-white/[0.08] bg-brand-surface transition-colors hover:border-brand-accent/35">
-    <CardContent className="flex min-w-0 flex-col gap-5 p-5 sm:p-6">
-     <div className="flex items-center gap-3">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Icon className="h-5 w-5"/></span>
-      <div className="min-w-0"><h2 className="text-base font-semibold text-brand-text">{t(title)}</h2><p className="mt-1 text-sm text-brand-text-muted">{t(description)}</p></div>
-     </div>
-     <Button asChild className="min-h-11 w-full"><Link to={to}>{t(title)}</Link></Button>
-    </CardContent>
-   </Card>)}
+   {services.map(({title,description,to,icon:Icon})=><Link key={to} to={to} className="group flex min-w-0 items-center gap-4 rounded-xl border border-white/[0.08] bg-brand-surface p-5 transition-colors hover:border-brand-accent/40 hover:bg-brand-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent sm:p-6">
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Icon className="h-5 w-5"/></span>
+    <span className="min-w-0 flex-1"><span className="block text-base font-semibold text-brand-text">{t(title)}</span><span className="mt-1 block text-sm text-brand-text-muted">{t(description)}</span></span>
+    <ChevronRight className="h-5 w-5 shrink-0 text-brand-text-muted transition-transform group-hover:translate-x-0.5"/>
+   </Link>)}
   </div>
  </PageFrame>;
 }
@@ -1573,6 +1569,7 @@ export function WithdrawPage(){
   :needsSignIn&&!DEV_OPEN_ACCOUNT_PAGES?<Card className="border-brand-border bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4"><p className="text-xs text-brand-text-muted">{t("Please sign in to view your account data")}</p><Button asChild size="sm" className="h-10"><Link to="/login">{t("Go to sign in")}</Link></Button></CardContent></Card>
   :error&&!account?<Card className="border-brand-danger/30 bg-brand-surface"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-5"><p className="text-sm text-brand-danger" role="alert">{t(error)}</p><Button size="sm" variant="outline" onClick={()=>setReload(n=>n+1)}>{t("Try again")}</Button></CardContent></Card>
   :<>
+   {!config?.actions_enabled ? <div className="rounded-xl border border-brand-border bg-brand-surface p-4 text-sm text-brand-text-muted" role="status">{t("Withdrawals are currently unavailable.")}</div> : null}
    {config?.actions_enabled ? (
 <Card aria-busy={submitting} className="relative overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"><span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-brand-surface"/><CardHeader className="border-b border-brand-border bg-brand-surface"><div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><ArrowUpRight className="h-5 w-5"/></span><div className="min-w-0"><CardTitle>{t("Submit withdrawal")}</CardTitle><Link to="/address-book" className="mt-2 inline-flex min-h-9 items-center text-sm font-medium text-brand-accent hover:underline">{t("Saved crypto addresses")}</Link></div></div></CardHeader><CardContent className="p-4 sm:p-6">
     {usableAddresses.length===0?<div className="rounded-xl border border-dashed border-brand-border p-5 text-sm text-brand-text-muted">{t("No available withdrawal address. Add one to continue.")}</div>
