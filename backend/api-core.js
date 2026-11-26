@@ -5367,6 +5367,7 @@ exports._test = {
   compareMoney: compareMoney,
   addMoney: addMoney,
   multiplyMoneyCeil: multiplyMoneyCeil,
+  floorMoneyToDecimals: floorMoneyToDecimals,
   withdrawalAddressCheck: withdrawalAddressCheck,
   safeWithdrawalFees: safeWithdrawalFees,
   safeWithdrawalNetworks: safeWithdrawalNetworks,
