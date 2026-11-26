@@ -34,6 +34,7 @@ CREATE OR REPLACE FUNCTION public.apply_internal_conversion_atomic(
   p_from_amount numeric,
   p_to_amount numeric,
   p_quote_rate numeric,
+  p_quote_expires_at bigint,
   p_request_hash text,
   p_metadata jsonb DEFAULT '{}'::jsonb
 ) RETURNS jsonb
@@ -56,6 +57,7 @@ BEGIN
      OR p_from_amount IS NULL OR p_from_amount <= 0
      OR p_to_amount IS NULL OR p_to_amount <= 0
      OR p_quote_rate IS NULL OR p_quote_rate <= 0
+     OR p_quote_expires_at IS NULL OR p_quote_expires_at <= 0
      OR p_request_hash IS NULL OR p_request_hash = ''
      OR p_metadata IS NULL OR jsonb_typeof(p_metadata) <> 'object' THEN
     RAISE EXCEPTION 'invalid internal conversion request';
@@ -109,6 +111,10 @@ BEGIN
     FROM public.financial_accounts
     WHERE user_id=p_user_id AND asset=p_to_asset;
 
+  IF p_quote_expires_at <= floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint THEN
+    RAISE EXCEPTION 'conversion quote expired';
+  END IF;
+
   INSERT INTO public.financial_conversion_quotes(quote_id,operation_id,user_id)
     VALUES (p_quote_id::uuid,v_op.id,p_user_id)
     ON CONFLICT (quote_id) DO NOTHING;
@@ -144,10 +150,10 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.apply_internal_conversion_atomic(
-  text,text,text,text,text,numeric,numeric,numeric,text,jsonb
+  text,text,text,text,text,numeric,numeric,numeric,bigint,text,jsonb
 ) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_internal_conversion_atomic(
-  text,text,text,text,text,numeric,numeric,numeric,text,jsonb
+  text,text,text,text,text,numeric,numeric,numeric,bigint,text,jsonb
 ) TO service_role;
 
      OR p_user_id IS NULL OR p_user_id = ''
