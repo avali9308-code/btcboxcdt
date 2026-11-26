@@ -192,7 +192,9 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'conversion quote already used'; END IF;
 
   INSERT INTO public.financial_accounts(user_id,asset)
-  VALUES (p_user_id,p_from_asset),(p_user_id,p_to_asset)
+  SELECT p_user_id,asset
+  FROM (VALUES (p_from_asset),(p_to_asset)) AS requested(asset)
+  ORDER BY asset
   ON CONFLICT (user_id,asset) DO NOTHING;
 
   -- Always lock the two account rows in asset-code order to avoid deadlocks
