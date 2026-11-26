@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "Nessuna cronologia dei prelievi.",
   "Funds": "Fondi",
   "Withdrawals are currently unavailable.": "I prelievi non sono attualmente disponibili.",
-  "Show more": "Mostra altro"
+  "Show more": "Mostra altro",
+  "Saved withdrawal address security notice": "Per sicurezza, gli indirizzi di prelievo salvati non possono essere modificati o rimossi. Contatta l'assistenza se hai bisogno di una modifica."
 }
