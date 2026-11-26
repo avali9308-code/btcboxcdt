@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDownToLine, ArrowUpFromLine, ArrowUpRight, ChevronDown, Eye, EyeOff, LockKeyhole, Sprout, Wallet } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Eye, EyeOff, LockKeyhole, Sprout, Wallet } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { ApiError, getAccount, type AccountBalance, type AccountSnapshot } from "../../lib/api";
