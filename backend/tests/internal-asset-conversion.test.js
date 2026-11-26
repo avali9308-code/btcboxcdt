@@ -30,6 +30,9 @@ test('atomic conversion debits and credits both assets in one transaction with o
   assert.match(migration, /available=available\+p_to_amount/i);
   assert.match(migration, /INSERT INTO public\.financial_ledger[\s\S]*?\(v_op\.id,p_user_id,p_from_asset,-p_from_amount[\s\S]*?\(v_op\.id,p_user_id,p_to_asset,p_to_amount/i);
   assert.match(migration, /'asset_conversion'/);
+  assert.match(migration, /pg_get_expr\(conbin, conrelid\)/,
+    'the live operation allowlist must be preserved rather than replaced with a stale hard-coded list');
+  assert.match(migration, /OR operation_type = %L/);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.apply_internal_conversion_atomic/i);
   assert.match(migration, /TO service_role/i);
 });
