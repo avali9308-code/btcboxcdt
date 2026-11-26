@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "No address saved for this asset",
   "No saved withdrawal address for this asset.": "No saved withdrawal address for this asset.",
   "Add withdrawal address": "Add withdrawal address",
-  "No available withdrawal asset. Please contact support.": "No available withdrawal asset. Please contact support."
+  "No available withdrawal asset. Please contact support.": "No available withdrawal asset. Please contact support.",
+  "This conversion quote has already been used. Request a new quote.": "This conversion quote has already been used. Request a new quote."
 }
