@@ -87,11 +87,11 @@ export function getTierFallback(tier: NavigationTier): string {
  * site). Without this, `back()` would leave BTCBOX entirely.
  */
 export function useHistoryDepth() {
-  return useMemo(() => {
-    if (typeof window === "undefined") return 0;
-    const state = window.history.state as { idx?: number } | null;
-    return typeof state?.idx === "number" ? state.idx : 0;
-  }, []);
+  // Read the current router index on every render. Sub-page navigation can keep
+  // the same layout component mounted while the history index changes.
+  if (typeof window === "undefined") return 0;
+  const state = window.history.state as { idx?: number } | null;
+  return typeof state?.idx === "number" ? state.idx : 0;
 }
 
 export function useNavigationTier(pathname: string): NavigationTier {
