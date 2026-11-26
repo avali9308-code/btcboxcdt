@@ -105,6 +105,14 @@ async function installVisualApiMocks(page: Page) {
             address: "TQ9xE2EVisualFixtureAddress000000000000",
             blocked: false,
             unbound: false,
+          }, {
+            id: "visual-qa-withdrawal-address-2",
+            type: "crypto",
+            coin: "USDT",
+            network: "TRC20",
+            address: "TQ9xE2EVisualFixtureAddress111111111111",
+            blocked: false,
+            unbound: false,
           }],
         }),
       });
@@ -912,7 +920,16 @@ test("independent deposit, withdrawal, and conversion workflows render usable st
   await expect(page).toHaveURL(/\/withdraw$/);
   await expect(page.getByRole("heading", { name: "Withdraw", exact: true })).toBeVisible();
   await expect(page.getByLabel("Asset")).toHaveValue("USDT");
-  await expect(page.getByRole("button").filter({ hasText: "USDT · TRC20" }).first()).toBeVisible();
+  const addressTrigger = page.getByRole("button").filter({ hasText: "USDT · TRC20" }).first();
+  await expect(addressTrigger).toBeVisible();
+  await addressTrigger.click();
+  const addressOptions = page.getByRole("group", { name: "Withdrawal address" });
+  await expect(addressOptions).toBeVisible();
+  await expect(addressOptions.getByText("TQ9xE2EVisualFixtureAddress111111111111")).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await addressOptions.getByRole("button").filter({ hasText: "TQ9xE2EVisualFixtureAddress111111111111" }).click();
+  await expect(addressOptions).toHaveCount(0);
+  await expect(page.getByRole("button").filter({ hasText: "TQ9xE2EVisualFixtureAddress111111111111" }).first()).toBeVisible();
   await expect(page.getByText("Available", { exact: true })).toBeVisible();
   await expect(page.getByText("Withdrawal fee", { exact: true })).toBeVisible();
   const amount = page.getByLabel(/Amount/);
