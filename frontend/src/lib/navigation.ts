@@ -22,6 +22,15 @@ export const SUB_PAGE_ROUTES = [
   "/orders",
   "/deposit",
   "/withdraw",
+  "/settings",
+  "/kyc",
+  "/earn",
+  "/support",
+  "/trade-hub",
+  "/rewards",
+  "/new-listings",
+  "/address-book",
+  "/fund-password",
 ] as const;
 
 /**
@@ -31,19 +40,12 @@ export const SUB_PAGE_ROUTES = [
  * `SUB_PAGE_ROUTES` removes the global header and bottom tab bar, so the page must
  * provide its own title and back affordance in the same change.
  *
- * Pending migration: /settings, /kyc, /earn, /seconds, /contract, /support,
- * /trade-hub.
+ * Routes that still own their own product-level navigation are intentionally
+ * excluded until their screen wrappers are migrated.
  */
 export const PENDING_SUB_PAGE_ROUTES = [
-  "/settings",
-  "/kyc",
-  "/earn",
   "/seconds",
   "/contract",
-  "/support",
-  "/trade-hub",
-  "/rewards",
-  "/new-listings",
 ] as const;
 
 /**
