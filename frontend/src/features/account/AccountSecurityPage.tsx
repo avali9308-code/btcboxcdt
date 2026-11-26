@@ -5,6 +5,7 @@ import { ArrowLeft, Check, ChevronRight, Copy, Lock, ShieldCheck, Smartphone, Wa
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { TwoFactorCard } from "./TwoFactorCard";
+import { PageFrame } from "../pages/Pages";
 import { getAccount, type AccountSnapshot } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useAuthDialog } from "../../lib/auth-dialog";
@@ -56,7 +57,7 @@ export function AccountSecurityPage() {
     return () => { active = false; };
   }, [status, notice]);
 
-  if (status === "loading") return <div role="status" aria-live="polite" className="mx-auto flex min-h-[40vh] items-center justify-center text-sm text-brand-text-muted">{t("Loading account security…")}</div>;
+  if (status === "loading") return <PageFrame title={t("Security settings")} tone="account" backTo="/me"><div role="status" aria-live="polite" className="mx-auto flex min-h-[40vh] items-center justify-center text-sm text-brand-text-muted">{t("Loading account security…")}</div></PageFrame>;
   // Local development opens the page so the layout can be edited; a production
   // build still redirects because `import.meta.env.DEV` compiles to false.
   if (status !== "authenticated" && !DEV_OPEN_ACCOUNT_PAGES) return <Navigate to="/login" replace />;
