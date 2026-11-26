@@ -1884,5 +1884,9 @@
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "兑换结果尚未确认。请刷新余额并查看操作记录后再重试。",
   "Conversion completed.": "兑换成功。",
   "This conversion was already processed.": "该兑换请求已处理，请勿重复提交。",
-  "Loading wallet balances…": "正在加载钱包余额…"
+  "Loading wallet balances…": "正在加载钱包余额…",
+  "No address saved for this asset": "该币种尚未保存提现地址",
+  "No saved withdrawal address for this asset.": "该币种暂无已保存的提现地址。",
+  "Add withdrawal address": "添加提现地址",
+  "No available withdrawal asset. Please contact support.": "当前没有可用的提现币种，请联系客服。"
 }
