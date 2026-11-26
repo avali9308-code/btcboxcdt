@@ -24,6 +24,7 @@ const routes = [
   { path: "/orders", heading: "Orders" },
   { path: "/deposit", heading: "Deposit" },
   { path: "/withdraw", heading: "Withdraw" },
+  { path: "/convert", heading: "Convert assets" },
   { path: "/earn", heading: "Earn" },
   { path: "/kyc", heading: "Identity verification" },
   { path: "/rewards", heading: "Rewards & referrals" },
@@ -380,7 +381,7 @@ async function assertPageAtWidth(
     ).toBeVisible();
   }
 
-  if (["/funds", "/deposit", "/withdraw"].includes(route.path)) {
+  if (["/funds", "/deposit", "/withdraw", "/convert"].includes(route.path)) {
     await expect(page.locator(".bf-bottom-nav"), "Funds workflows must hide the global mobile tab bar.").toBeHidden();
     await expect(page.getByRole("link", { name: "BTCBOX home" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Back" })).toBeVisible();
@@ -949,6 +950,94 @@ test("independent deposit, withdrawal, and conversion workflows render usable st
   await expect(page.getByRole("button", { name: "Swap assets" })).toBeVisible();
 });
 
+
+
+test("withdrawal asset switch refreshes network, saved addresses, balance and fee", async ({ page }) => {
+  test.skip(test.info().project.name !== "mobile-chromium", "Focused withdrawal selector regression runs in the mobile project.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installVisualApiMocks(page);
+  await page.route("**/api/account", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, uid: "withdraw-asset-switch-user", username: "withdraw_user",
+      balances: {
+        USDT: { free: "100", frozen: "0" },
+        USDC: { free: "250", frozen: "0" },
+      },
+      unpriced_assets: [], kyc: { status: "not_submitted" }, has_login_password: true,
+    }),
+  }));
+  await page.route("**/api/addresses", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({ ok: true, addresses: [
+      { id: "usdt-address-1", type: "crypto", coin: "USDT", network: "TRC20", address: "USDT_TRON_ADDRESS_FIXTURE", blocked: false, unbound: false },
+      { id: "usdc-address-1", type: "crypto", coin: "USDC", network: "ERC20", address: "USDC_ETH_ADDRESS_FIXTURE", blocked: false, unbound: false },
+    ] }),
+  }));
+  await page.goto("/withdraw", { waitUntil: "domcontentloaded" });
+  const asset = page.getByLabel("Asset");
+  await expect(asset).toHaveValue("USDT");
+  await page.getByLabel(/Amount/).fill("10");
+  await expect(page.getByText("9 USDT", { exact: true })).toBeVisible();
+
+  await asset.selectOption("USDC");
+  await expect(asset).toHaveValue("USDC");
+  await expect(page.getByLabel(/Amount/)).toHaveValue("");
+  await expect(page.getByLabel("Network")).toHaveValue("ERC20");
+  await expect(page.getByText("250", { exact: true })).toBeVisible();
+  await expect(page.getByText("USDT_TRON_ADDRESS_FIXTURE", { exact: true })).toHaveCount(0);
+
+  const addressTrigger = page.getByRole("button").filter({ hasText: "USDC · ERC20" }).first();
+  await expect(addressTrigger).toBeVisible();
+  await addressTrigger.click();
+  const options = page.getByRole("group", { name: "Withdrawal address" });
+  await expect(options).toBeVisible();
+  await expect(options.getByText("USDC_ETH_ADDRESS_FIXTURE", { exact: true })).toBeVisible();
+  await expect(options.getByText("USDT_TRON_ADDRESS_FIXTURE", { exact: true })).toHaveCount(0);
+  await options.getByRole("button").filter({ hasText: "USDC_ETH_ADDRESS_FIXTURE" }).click();
+  await page.getByLabel(/Amount/).fill("10");
+  await expect(page.getByText("9 USDC", { exact: true })).toBeVisible();
+  await expect(page.getByText("Withdrawal fee", { exact: true })).toBeVisible();
+  // This test deliberately stops before submission; no financial operation is sent.
+});
+
+test("assets list can scroll its final row fully above the fixed mobile navigation", async ({ page }) => {
+  test.skip(test.info().project.name !== "mobile-chromium", "Bottom-navigation clearance runs in the mobile project.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installVisualApiMocks(page);
+  const symbols = ["BTC", "ETH", "USDT", "USDC", "SOL", "BNB", "XRP", "ADA", "AVAX", "LINK", "DOT", "TRX", "LTC", "BCH", "NEAR"];
+  const balances = Object.fromEntries(symbols.map((symbol, index) => [
+    symbol,
+    { free: String(index + 1), frozen: "0", usdt: String((index + 1) * 100), valuation_available: true },
+  ]));
+  await page.route("**/api/account", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ok: true, uid: "asset-bottom-scroll-user", username: "asset_scroll_user",
+      balances, totalUsdt: "12000", valuation_complete: true, unpriced_assets: [],
+      kyc: { status: "not_submitted" }, has_login_password: true,
+    }),
+  }));
+  await page.goto("/assets", { waitUntil: "domcontentloaded" });
+  const list = page.getByTestId("asset-balance-list");
+  const rows = list.locator(":scope > div > div");
+  await expect(rows).toHaveCount(symbols.length);
+  await rows.last().scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    const main = document.querySelector("main");
+    if (main) main.scrollTop = main.scrollHeight;
+    document.scrollingElement?.scrollTo(0, document.scrollingElement.scrollHeight);
+  });
+  await expect.poll(async () => {
+    const row = await rows.last().boundingBox();
+    const nav = await page.locator(".bf-bottom-nav").boundingBox();
+    return Boolean(row && nav && row.bottom <= nav.top - 4 && row.top >= 0);
+  }, { message: "The last asset row must be fully visible above the fixed bottom navigation after scrolling to the end." }).toBe(true);
+  await expect(rows.last()).toBeVisible();
+  await rows.last().click();
+  await expect(page).toHaveURL(/\/assets$/);
+});
+
 test("trade interaction QA mobile spot market selection and order-book handoff", async ({ page }) => {
   test.skip(test.info().project.name !== "mobile-chromium", "Trade interaction QA runs in the mobile touch project.");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1048,7 +1137,7 @@ test("trade interaction QA desktop order-book side and price handoff", async ({ 
 // passing only at the seven required snapshot widths. These are desktop-browser
 // viewport sweeps; independent touch-device coverage is provided above.
 for (const route of routes.filter((item) => [
-  "/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/deposit", "/withdraw", "/contract",
+  "/home", "/markets", "/trade/BTCUSDT", "/trade-hub", "/assets", "/deposit", "/withdraw", "/convert", "/contract",
 ].includes(item.path))) {
   test("continuous responsive sweep " + route.path, async ({ page }) => {
     test.setTimeout(300_000);
