@@ -849,7 +849,7 @@ test("account and home navigation preserve safe return destinations", async ({ p
 
   await page.goto("/orders", { waitUntil: "domcontentloaded" });
   await page.locator('button[aria-label="Back"]').click();
-  await expect(page).toHaveURL(/\\/home$/);
+  await expect(page).toHaveURL(/\/home$/);
 
   await page.goto("/me", { waitUntil: "domcontentloaded" });
   await page.locator('a[href="/address-book"]').click();
