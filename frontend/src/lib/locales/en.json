@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "No withdrawal history yet.",
   "Funds": "Funds",
   "Withdrawals are currently unavailable.": "Withdrawals are currently unavailable.",
-  "Show more": "Show more"
+  "Show more": "Show more",
+  "Saved withdrawal address security notice": "For security, saved withdrawal addresses cannot be edited or removed. Contact support if you need a change."
 }
