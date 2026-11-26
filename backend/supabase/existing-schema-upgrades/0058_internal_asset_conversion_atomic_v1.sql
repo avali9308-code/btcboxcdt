@@ -17,6 +17,24 @@ BEGIN
      OR to_regclass('public.btcbox_assets') IS NULL THEN
     RAISE EXCEPTION 'BTCBOX existing financial ledger and asset registry are required; no changes applied';
   END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.financial_operations'::regclass
+      AND conname='financial_operations_operation_type_check'
+      AND contype='c'
+  ) THEN
+    RAISE EXCEPTION 'Expected financial operation constraint is missing; inspect the live schema before applying';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.financial_operations'::regclass
+      AND conname='financial_operations_operation_type_check'
+      AND pg_get_constraintdef(oid) LIKE '%perp_bad_debt%'
+      AND pg_get_constraintdef(oid) LIKE '%perp_funding%'
+      AND pg_get_constraintdef(oid) LIKE '%migration_opening_balance%'
+  ) THEN
+    RAISE EXCEPTION 'Live financial operation allowlist differs from the reviewed BTCBOX schema; stop and reconcile before applying';
+  END IF;
 END;
 $preflight$;
 
@@ -155,8 +173,8 @@ BEGIN
     RETURN jsonb_build_object(
       'ok',true,'duplicate',true,'operation_id',v_op.id,
       'from_asset',p_from_asset,'to_asset',p_to_asset,
-      'from_available',v_from_after,'to_available',v_to_after,
-      'from_amount',p_from_amount,'to_amount',p_to_amount
+      'from_available',v_from_after::text,'to_available',v_to_after::text,
+      'from_amount',p_from_amount::text,'to_amount',p_to_amount::text
     );
   END IF;
 
@@ -238,8 +256,8 @@ BEGIN
   RETURN jsonb_build_object(
     'ok',true,'duplicate',false,'operation_id',v_op.id,
     'from_asset',p_from_asset,'to_asset',p_to_asset,
-    'from_available',v_from_after,'to_available',v_to_after,
-    'from_amount',p_from_amount,'to_amount',p_to_amount
+    'from_available',v_from_after::text,'to_available',v_to_after::text,
+    'from_amount',p_from_amount::text,'to_amount',p_to_amount::text
   );
 END;
 $function$;
@@ -255,6 +273,7 @@ COMMENT ON FUNCTION public.apply_internal_conversion_atomic(
   text,uuid,text,text,text,numeric,numeric,numeric,bigint,text,jsonb
 ) IS 'Atomic two-asset conversion using the existing BTCBOX financial accounts and ledger. Manual existing-schema upgrade only; signed quotes are single-use and request retries are idempotent.';
 
+NOTIFY pgrst, 'reload schema';
 COMMIT;
 
      OR p_metadata IS NULL OR jsonb_typeof(p_metadata) <> 'object' THEN
