@@ -168,8 +168,8 @@ export function AssetsPage() {
           )}
           {/* 行 5：充值 / 提现 / 理财 */}
           <div className="relative grid w-full grid-cols-3 gap-2 sm:w-auto sm:min-w-[340px]">
-            <Button asChild className="min-h-11 text-sm font-bold"><Link to="/deposit"><ArrowDownToLine className="h-4 w-4"/>{t("Deposit")}</Link></Button>
-            <Button asChild variant="outline" className="min-h-11 text-sm font-bold"><Link to="/withdraw"><ArrowUpFromLine className="h-4 w-4"/>{t("Withdraw")}</Link></Button>
+            <Button asChild className="min-h-11 text-sm font-bold"><Link to="/funds"><ArrowDownToLine className="h-4 w-4"/>{t("Deposit")}</Link></Button>
+            <Button asChild variant="outline" className="min-h-11 text-sm font-bold"><Link to="/funds"><ArrowUpFromLine className="h-4 w-4"/>{t("Withdraw")}</Link></Button>
             <Button asChild variant="outline" className="min-h-11 text-sm font-bold"><Link to="/earn"><Sprout className="h-4 w-4"/>{t("Earn")}</Link></Button>
           </div>
         </CardContent>
