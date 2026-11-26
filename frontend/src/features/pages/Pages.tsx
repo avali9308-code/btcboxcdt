@@ -1179,7 +1179,7 @@ export function SupportPage(){
  const {status}=useAuth();
  // The conversation itself lives in features/support/SupportChat so the support
  // module owns its own state, retry contract and API calls.
- return <PageFrame title="Customer support" tone="support" onBack={()=>navigate(-1)}>
+ return <PageFrame title="Customer support" tone="support" onBack={()=>navigate("/me", { replace: true })}>
   <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.12fr)_minmax(360px,.88fr)] lg:gap-5">
    <SupportFaq />
    {status==="authenticated"?<SupportChat />:<Card className="self-start overflow-hidden border border-white/[0.08] bg-brand-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)] lg:sticky lg:top-6"><CardHeader className="bg-brand-surface"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/10 text-brand-accent"><Headset className="h-5 w-5"/></span><div><CardTitle>{t("BTCBOX Help Center")}</CardTitle><CardDescription>{t("Public support information is available without signing in.")}</CardDescription></div></div></CardHeader><CardContent className="space-y-3 text-sm text-brand-text-secondary"><p>{t("For account-specific questions, deposit or withdrawal reviews, and private conversation history, sign in to your BTCBOX account first.")}</p><Button asChild><Link to="/login">{t("Sign in to contact support")}</Link></Button></CardContent></Card>}
