@@ -75,7 +75,6 @@ FILES=(
   0055_withdrawal_approval_debit_at_review_v1.sql
   0056_usdc_withdrawal_settlement_in_usdt_v1.sql
   0057_admin_withdrawal_queue_includes_approved_payouts_v1.sql
-  0058_internal_asset_conversion_atomic_v1.sql
 )
 
 for file in "${FILES[@]}"; do
