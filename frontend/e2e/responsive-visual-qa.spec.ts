@@ -883,18 +883,20 @@ test("account and home navigation preserve safe return destinations", async ({ p
   await expect(page).toHaveURL(/\/home$/);
 });
 
-test("deposit and withdrawal workflows render usable states", async ({ page, context }) => {
+test("independent deposit, withdrawal, and conversion workflows render usable states", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.setViewportSize({ width: 390, height: 844 });
   await installVisualApiMocks(page);
 
+  // Asset actions are independent first-level destinations; there is no
+  // intermediate combined Funds page.
   await page.goto("/assets", { waitUntil: "domcontentloaded" });
-  await page.getByRole("link", { name: "Deposit / Withdraw" }).click();
-  await expect(page).toHaveURL(/\/funds$/);
-  await expect(page.getByRole("heading", { name: "Funds" })).toBeVisible();
-  await page.getByRole("link", { name: /Deposit Deposit address/ }).click();
+  await expect(page.getByRole("link", { name: "Deposit", exact: true })).toHaveAttribute("href", "/deposit");
+  await expect(page.getByRole("link", { name: "Withdraw", exact: true })).toHaveAttribute("href", "/withdraw");
+  await expect(page.getByRole("link", { name: "Convert", exact: true })).toHaveAttribute("href", "/convert");
+
+  await page.getByRole("link", { name: "Deposit", exact: true }).click();
   await expect(page).toHaveURL(/\/deposit$/);
-  await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
   await expect(page.getByLabel("Asset")).toHaveValue("USDT");
   await expect(page.getByLabel("Network")).toHaveValue("TRC20");
@@ -905,20 +907,29 @@ test("deposit and withdrawal workflows render usable states", async ({ page, con
   await expect(page.getByRole("status").filter({ hasText: "Deposit address copied." })).toBeVisible();
 
   await page.getByRole("link", { name: "Back" }).click();
-  await expect(page).toHaveURL(/\/funds$/);
-  await page.getByRole("link", { name: /Withdraw Submit withdrawal/ }).click();
+  await expect(page).toHaveURL(/\/assets$/);
+  await page.getByRole("link", { name: "Withdraw", exact: true }).click();
   await expect(page).toHaveURL(/\/withdraw$/);
   await expect(page.getByRole("heading", { name: "Withdraw" })).toBeVisible();
-  await expect(page.getByLabel("Withdrawal address")).toBeVisible();
-  await expect(page.getByText("Selected destination: USDT · TRC20")).toBeVisible();
+  await expect(page.getByLabel("Asset")).toHaveValue("USDT");
+  await expect(page.getByRole("button").filter({ hasText: "USDT · TRC20" }).first()).toBeVisible();
   await expect(page.getByText("Available", { exact: true })).toBeVisible();
   await expect(page.getByText("Withdrawal fee", { exact: true })).toBeVisible();
   const amount = page.getByLabel(/Amount/);
   await amount.fill("10");
   await expect(page.getByText("9 USDT", { exact: true })).toBeVisible();
   await page.getByLabel("Fund password").fill("visual-only-password");
-  await expect(page.getByRole("button", { name: "Submit withdrawal" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Submit withdrawal" })).toBeVisible();
   // The visual fixture must never submit a financial operation.
+
+  await page.getByRole("link", { name: "Back" }).click();
+  await expect(page).toHaveURL(/\/assets$/);
+  await page.getByRole("link", { name: "Convert", exact: true }).click();
+  await expect(page).toHaveURL(/\/convert$/);
+  await expect(page.getByRole("heading", { name: "Convert assets" })).toBeVisible();
+  await expect(page.getByLabel("From")).toBeVisible();
+  await expect(page.getByLabel("To")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Swap assets" })).toBeVisible();
 });
 
 test("trade interaction QA mobile spot market selection and order-book handoff", async ({ page }) => {
