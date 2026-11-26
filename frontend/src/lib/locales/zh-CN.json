@@ -1863,5 +1863,6 @@
   "No withdrawal history yet.": "暂无提现记录",
   "Funds": "资金管理",
   "Withdrawals are currently unavailable.": "提现服务目前暂不可用。",
-  "Show more": "显示更多"
+  "Show more": "显示更多",
+  "Saved withdrawal address security notice": "为保障资产安全，已保存的提现地址不可自行修改或删除。如需变更，请联系客服协助处理。"
 }
