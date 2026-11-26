@@ -22,7 +22,6 @@ export const SUB_PAGE_ROUTES = [
   "/orders",
   "/deposit",
   "/withdraw",
-  "/settings",
   "/kyc",
   "/earn",
   "/support",
@@ -44,6 +43,7 @@ export const SUB_PAGE_ROUTES = [
  * excluded until their screen wrappers are migrated.
  */
 export const PENDING_SUB_PAGE_ROUTES = [
+  "/settings",
   "/seconds",
   "/contract",
 ] as const;
