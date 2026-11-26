@@ -30,8 +30,8 @@ export const SUB_PAGE_ROUTES = [
  * surface, so a route may only move into `SUB_PAGE_ROUTES` in the same change that
  * wraps the page in `SubPageLayout`.
  *
- * Pending migration: /funds, /deposit, /withdraw, /settings, /kyc, /earn, /seconds,
- * /contract, /support, /trade-hub.
+ * Pending migration: /settings, /kyc, /earn, /seconds, /contract, /support,
+ * /trade-hub.
  */
 export const PENDING_SUB_PAGE_ROUTES = [
   "/funds",
