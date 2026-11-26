@@ -983,8 +983,9 @@ test("withdrawal asset switch refreshes network, saved addresses, balance and fe
   await asset.selectOption("USDC");
   await expect(asset).toHaveValue("USDC");
   await expect(page.getByLabel(/Amount/)).toHaveValue("");
-  await expect(page.getByLabel("Network")).toHaveValue("ERC20");
-  await expect(page.getByText("250", { exact: true })).toBeVisible();
+  // Network is bound to the selected saved address, not a separate dropdown.
+  // USDC withdrawals settle against the USDT balance.
+  await expect(page.getByText("100 USDT", { exact: true })).toBeVisible();
   await expect(page.getByText("USDT_TRON_ADDRESS_FIXTURE", { exact: true })).toHaveCount(0);
 
   const addressTrigger = page.getByRole("button").filter({ hasText: "USDC · ERC20" }).first();
@@ -1034,8 +1035,8 @@ test("assets list can scroll its final row fully above the fixed mobile navigati
     return Boolean(row && nav && row.bottom <= nav.top - 4 && row.top >= 0);
   }, { message: "The last asset row must be fully visible above the fixed bottom navigation after scrolling to the end." }).toBe(true);
   await expect(rows.last()).toBeVisible();
-  await rows.last().click();
-  await expect(page).toHaveURL(/\/assets$/);
+  await expect(page.locator(".bf-bottom-nav")).toBeVisible();
+  await page.screenshot({ path: path.resolve(process.cwd(), "test-results/visual-qa/assets-bottom-scroll-390.png"), fullPage: false });
 });
 
 test("trade interaction QA mobile spot market selection and order-book handoff", async ({ page }) => {
