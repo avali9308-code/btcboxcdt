@@ -2793,6 +2793,9 @@ async function handleRequest(event, context) {
   // alter the rate or receive amount before the atomic ledger operation.
   if (path === 'convert/quote' && method === 'GET') {
     if (!user) return json({ ok: false, msg: 'Not signed in.', need_login: true }, 401);
+    if (process.env.FINANCIAL_INTERNAL_CONVERSION_ENABLED !== '1') {
+      return json({ ok: false, code: 'CONVERSION_NOT_ENABLED', msg: 'Internal conversion is not available yet. No assets were moved.' }, 503);
+    }
     const rl = await rateCheckShared('spot_order', String(user.uid));
     if (rl.unavailable) return rateLimitUnavailableJson();
     if (rl.limited) return rateLimitedJson(rl.retryAfter);
@@ -2857,7 +2860,7 @@ async function handleRequest(event, context) {
   if (path === 'convert' && method === 'POST') {
     if (!user) return json({ ok: false, msg: 'Not signed in.', need_login: true }, 401);
     if (user.frozen) return json({ ok: false, code: 'ACCOUNT_FROZEN', msg: 'Account frozen. Asset conversion is not available.' }, 403);
-    if (!financialWritesEnabled() || !supabaseStorageConfigured()) {
+    if (process.env.FINANCIAL_INTERNAL_CONVERSION_ENABLED !== '1' || !financialWritesEnabled() || !supabaseStorageConfigured()) {
       return json({ ok: false, code: 'CONVERSION_NOT_ENABLED', msg: 'Internal conversion is not available yet. No assets were moved.' }, 503);
     }
     const rl = await rateCheckShared('spot_order', String(user.uid));
