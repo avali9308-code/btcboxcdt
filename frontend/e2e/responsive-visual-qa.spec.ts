@@ -806,6 +806,34 @@ for (const route of routes) {
   });
 }
 
+test("order history progressive rendering works on mobile and desktop", async ({ page }) => {
+  await installVisualApiMocks(page);
+  const orders = Array.from({ length: 25 }, (_, index) => ({
+    order_id: "order-" + String(index + 1).padStart(2, "0"),
+    symbol: "BTCUSDT",
+    side: "buy",
+    type: "limit",
+    price: "65000",
+    quantity: "0.01",
+    status: "filled",
+    created_at: "2026-11-26T00:00:00.000Z",
+  }));
+  await page.route("**/api/orders", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ ok: true, orders }),
+  }));
+
+  await page.goto("/orders", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
+  await expect(page.getByText("order-20", { exact: true })).toBeVisible();
+  await expect(page.getByText("order-21", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: /Show more/ }).click();
+  await expect(page.getByText("order-21", { exact: true })).toBeVisible();
+  await expect(page.getByText("order-25", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Show more/ })).toHaveCount(0);
+});
+
 test("account and home navigation preserve safe return destinations", async ({ page }) => {
   test.skip(test.info().project.name !== "mobile-chromium", "Navigation handoff QA runs once in the mobile touch project.");
   await page.setViewportSize({ width: 390, height: 844 });
