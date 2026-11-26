@@ -26,15 +26,14 @@ export const SUB_PAGE_ROUTES = [
   "/kyc",
   "/earn",
   "/support",
-  "/trade-hub",
   "/rewards",
   "/address-book",
   "/fund-password",
 ] as const;
 
 /**
- * Routes intentionally kept at the top tier because they are primary product
- * surfaces or still need a dedicated secondary-page header before migration.
+ * Primary product surfaces intentionally kept at the top tier. In particular,
+ * /trade-hub is the Trade tab landing surface, not a detail page.
  */
 export const PENDING_SUB_PAGE_ROUTES = [
   "/seconds",
