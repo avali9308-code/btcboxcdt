@@ -169,7 +169,7 @@ function QuickActions() {
     <section aria-label={t("Quick access")}>
       <div className="grid grid-cols-4 gap-y-4">
         {entries.map((entry) => (
-          <Link key={entry.label} to={entry.to} className="group flex flex-col items-center gap-2">
+          <Link key={entry.label} to={entry.to} state={entry.to === "/rewards" ? { from: "/home" } : undefined} className="group flex flex-col items-center gap-2">
             <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-gradient-to-b from-brand-surface-hover to-brand-surface-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)] text-brand-text-secondary transition-all duration-300 group-hover:scale-105 group-hover:text-brand-accent group-hover:border-brand-accent/30 group-hover:shadow-[0_8px_30px_rgba(14,203,129,0.12)]">
               <entry.icon className="h-5 w-5" strokeWidth={1.75} />
               {entry.badge && (
