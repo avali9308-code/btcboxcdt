@@ -1339,17 +1339,18 @@ export function InternalConversionPage(){
  const swapAssets=()=>{const previous=fromAsset;setFromAsset(toAsset);setToAsset(previous);resetQuote();};
  const confirm=async()=>{
   if(!quote||!requestId||submitting)return;
-  if(quote.expires_at<=Date.now()){setQuote(null);setRequestId("");setError("The conversion quote has expired. Request a new quote.");return;}
   setSubmitting(true);setError("");setMessage("");
   try{
    const result=await submitInternalConversion({request_id:requestId,quote_token:quote.quote_token});
    setMessage(result.duplicate?"This conversion was already processed.":"Conversion completed.");
    setQuote(null);setRequestId("");setAmount("");
    setReload(value=>value+1);
-  }catch(reason){setError(localizedFailure(reason,"Conversion result is unconfirmed. Refresh your balances and check operation history before retrying."));}
+  }catch(reason){
+   if(reason instanceof ApiError&&(reason.code==="CONVERSION_QUOTE_EXPIRED"||reason.code==="CONVERSION_QUOTE_USED")){setQuote(null);setRequestId("");setError(reason.code==="CONVERSION_QUOTE_EXPIRED"?"The conversion quote has expired. Request a new quote.":"This conversion quote has already been used. Request a new quote.");}
+   else setError(localizedFailure(reason,"Conversion result is unconfirmed. Refresh your balances and check operation history before retrying."));
+  }
   finally{setSubmitting(false);}
  };
- const quoteExpired=!!quote&&quote.expires_at<=Date.now();
  return <PageFrame title="Convert" tone="assets" backTo="/assets" className="funds-flow-page">
   <div className="mx-auto w-full max-w-2xl space-y-5">
    {loading?<Card className="border-brand-border bg-brand-surface"><CardContent className="p-5 text-sm text-brand-text-muted" role="status">{t("Loading wallet balances…")}</CardContent></Card>
@@ -1375,7 +1376,7 @@ export function InternalConversionPage(){
      {error?<p className="text-sm text-brand-danger" role="alert">{t(error)}</p>:null}
      {message?<p className="text-sm text-brand-success" role="status">{t(message)}</p>:null}
      {!quote?<Button type="button" block className="min-h-12" disabled={quoting||submitting||!amount.trim()||!fromAsset||!toAsset||fromAsset===toAsset||compareDecimalStrings(amount,"0")!==1||compareDecimalStrings(amount,String(fromBalance))===1} onClick={getQuote}>{quoting?t("Loading…"):t("Get quote")}</Button>
-      :<Button type="button" block className="min-h-12" disabled={submitting||quoting||quoteExpired} onClick={confirm}>{submitting?t("Processing…"):t("Confirm conversion")}</Button>}
+      :<Button type="button" block className="min-h-12" disabled={submitting||quoting} onClick={confirm}>{submitting?t("Processing…"):t("Confirm conversion")}</Button>}
      <p className="text-xs leading-5 text-brand-text-muted">{t("Conversions are final once confirmed. Check the assets and amount before proceeding.")}</p>
     </CardContent>
    </Card>}
