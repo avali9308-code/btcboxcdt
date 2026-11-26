@@ -1037,11 +1037,23 @@ test("assets list can scroll its final row fully above the fixed mobile navigati
     const clearance = rowBox.bottom - navBox.top + 8;
     if (clearance > 0) main.scrollTop += clearance;
   });
-  await expect.poll(async () => {
-    const row = await rows.last().boundingBox();
-    const nav = await page.locator(".bf-bottom-nav").boundingBox();
-    return Boolean(row && nav && row.bottom <= nav.top - 4 && row.top >= 0);
-  }, { message: "The last asset row must be fully visible above the fixed bottom navigation after scrolling to the end." }).toBe(true);
+  const clearanceMetrics = await page.evaluate(() => {
+    const row = document.querySelector('[data-testid="asset-balance-list"] > div > div:last-child');
+    const nav = document.querySelector(".bf-bottom-nav");
+    const main = document.querySelector("main");
+    const list = document.querySelector('[data-testid="asset-balance-list"]');
+    if (!row || !nav || !main || !list) return { visible: false, reason: "missing layout element" };
+    const rowBox = row.getBoundingClientRect();
+    const navBox = nav.getBoundingClientRect();
+    return {
+      visible: rowBox.bottom <= navBox.top - 4 && rowBox.top >= 0,
+      row: { top: Math.round(rowBox.top), bottom: Math.round(rowBox.bottom), height: Math.round(rowBox.height) },
+      nav: { top: Math.round(navBox.top), bottom: Math.round(navBox.bottom), height: Math.round(navBox.height) },
+      main: { top: Math.round(main.getBoundingClientRect().top), bottom: Math.round(main.getBoundingClientRect().bottom), scrollTop: Math.round(main.scrollTop), scrollHeight: main.scrollHeight, clientHeight: main.clientHeight, maxScrollTop: main.scrollHeight - main.clientHeight },
+      list: { bottom: Math.round(list.getBoundingClientRect().bottom), scrollHeight: list.scrollHeight, clientHeight: list.clientHeight },
+    };
+  });
+  expect(clearanceMetrics.visible, `Last asset row must clear fixed navigation: ${JSON.stringify(clearanceMetrics)}`).toBe(true);
   await expect(rows.last()).toBeVisible();
   await expect(page.locator(".bf-bottom-nav")).toBeVisible();
   await page.screenshot({ path: path.resolve(process.cwd(), "test-results/visual-qa/assets-bottom-scroll-390.png"), fullPage: false });
