@@ -168,7 +168,7 @@ export function OrdersPage() {
                   <tr>{["Order", "Pair", "Side", "Type", "Price", "Quantity", "Status", "Created"].map((label) => <th key={label} className={`px-4 py-3 font-semibold ${label === "Price" || label === "Quantity" ? "text-right" : ""}`}>{t(label)}</th>)}</tr>
                 </thead>
                 <tbody>
-                  {visibleOrders.map((order, index) => {
+                  {pagedOrders.map((order, index) => {
                     const id = display(order.order_id ?? order.id, `#${index + 1}`);
                     const side = display(order.side);
                     return <tr key={id} className="border-b border-brand-border/80 last:border-0 transition-colors hover:bg-brand-surface-hover">
