@@ -897,7 +897,7 @@ test("independent deposit, withdrawal, and conversion workflows render usable st
 
   await page.getByRole("link", { name: "Deposit", exact: true }).click();
   await expect(page).toHaveURL(/\/deposit$/);
-  await expect(page.getByRole("heading", { name: "Deposit" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Deposit", exact: true })).toBeVisible();
   await expect(page.getByLabel("Asset")).toHaveValue("USDT");
   await expect(page.getByLabel("Network")).toHaveValue("TRC20");
   await expect(page.getByText("TQ9xE2EVisualFixtureAddress000000000000")).toBeVisible();
@@ -910,7 +910,7 @@ test("independent deposit, withdrawal, and conversion workflows render usable st
   await expect(page).toHaveURL(/\/assets$/);
   await page.getByRole("link", { name: "Withdraw", exact: true }).click();
   await expect(page).toHaveURL(/\/withdraw$/);
-  await expect(page.getByRole("heading", { name: "Withdraw" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Withdraw", exact: true })).toBeVisible();
   await expect(page.getByLabel("Asset")).toHaveValue("USDT");
   await expect(page.getByRole("button").filter({ hasText: "USDT · TRC20" }).first()).toBeVisible();
   await expect(page.getByText("Available", { exact: true })).toBeVisible();
