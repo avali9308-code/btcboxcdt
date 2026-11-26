@@ -835,7 +835,7 @@ test("account and home navigation preserve safe return destinations", async ({ p
   await page.locator('a[aria-label="Back"]').click();
   await expect(page).toHaveURL(/\/home$/);
 
-  await page.locator('a[href="/earn"]').first().click();
+  await page.getByRole("region", { name: "Quick access" }).locator('a[href="/earn"]').click();
   await expect(page.getByRole("heading", { name: "Earn" })).toBeVisible();
   await page.locator('a[aria-label="Back"]').click();
   await expect(page).toHaveURL(/\/home$/);
