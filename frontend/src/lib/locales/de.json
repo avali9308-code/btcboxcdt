@@ -1888,5 +1888,6 @@
   "No address saved for this asset": "Keine Auszahlungsadresse für diesen Vermögenswert gespeichert",
   "No saved withdrawal address for this asset.": "Für diesen Vermögenswert ist keine Auszahlungsadresse gespeichert.",
   "Add withdrawal address": "Auszahlungsadresse hinzufügen",
-  "No available withdrawal asset. Please contact support.": "Kein auszahlbarer Vermögenswert verfügbar. Bitte kontaktieren Sie den Support."
+  "No available withdrawal asset. Please contact support.": "Kein auszahlbarer Vermögenswert verfügbar. Bitte kontaktieren Sie den Support.",
+  "This conversion quote has already been used. Request a new quote.": "Dieses Umrechnungsangebot wurde bereits verwendet. Fordern Sie ein neues an."
 }
