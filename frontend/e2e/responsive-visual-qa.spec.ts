@@ -820,6 +820,7 @@ test("funds workflows render usable deposit and withdrawal states", async ({ pag
   await expect(page.getByText("Withdrawal fee", { exact: true })).toBeVisible();
   const amount = page.getByLabel(/Amount/);
   await amount.fill("10");
+  await expect(page.getByText("9 USDT", { exact: true })).toBeVisible();
   await page.getByLabel("Fund password").fill("visual-only-password");
   await expect(page.getByRole("button", { name: "Submit withdrawal" })).toBeEnabled();
   // The visual fixture must never submit a financial operation.
