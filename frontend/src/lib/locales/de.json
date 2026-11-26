@@ -1884,5 +1884,9 @@
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "Das Ergebnis ist unbestätigt. Aktualisieren Sie Ihre Guthaben und prüfen Sie den Verlauf.",
   "Conversion completed.": "Konvertierung abgeschlossen.",
   "This conversion was already processed.": "Diese Konvertierung wurde bereits verarbeitet.",
-  "Loading wallet balances…": "Wallet-Guthaben werden geladen…"
+  "Loading wallet balances…": "Wallet-Guthaben werden geladen…",
+  "No address saved for this asset": "Keine Auszahlungsadresse für diesen Vermögenswert gespeichert",
+  "No saved withdrawal address for this asset.": "Für diesen Vermögenswert ist keine Auszahlungsadresse gespeichert.",
+  "Add withdrawal address": "Auszahlungsadresse hinzufügen",
+  "No available withdrawal asset. Please contact support.": "Kein auszahlbarer Vermögenswert verfügbar. Bitte kontaktieren Sie den Support."
 }
