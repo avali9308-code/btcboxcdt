@@ -806,6 +806,41 @@ for (const route of routes) {
   });
 }
 
+test("account and home navigation preserve safe return destinations", async ({ page }) => {
+  test.skip(test.info().project.name !== "mobile-chromium", "Navigation handoff QA runs once in the mobile touch project.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installVisualApiMocks(page);
+
+  await page.goto("/me", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "My account" })).toBeVisible();
+
+  await page.locator('a[href="/address-book"]').click();
+  await expect(page.getByRole("heading", { name: "Address book" })).toBeVisible();
+  await page.locator('a[aria-label="Back"]').click();
+  await expect(page).toHaveURL(/\/me$/);
+
+  await page.locator('a[href="/rewards"]').click();
+  await expect(page.getByRole("heading", { name: "Rewards & referrals" })).toBeVisible();
+  await page.locator('a[aria-label="Back"]').click();
+  await expect(page).toHaveURL(/\/me$/);
+
+  await page.locator('a[href="/support"]').click();
+  await expect(page.getByRole("heading", { name: "Customer support" })).toBeVisible();
+  await page.locator('button[aria-label="Back"]').click();
+  await expect(page).toHaveURL(/\/me$/);
+
+  await page.goto("/home", { waitUntil: "domcontentloaded" });
+  await page.locator('a[href="/rewards"]').click();
+  await expect(page.getByRole("heading", { name: "Rewards & referrals" })).toBeVisible();
+  await page.locator('a[aria-label="Back"]').click();
+  await expect(page).toHaveURL(/\/home$/);
+
+  await page.locator('a[href="/earn"]').first().click();
+  await expect(page.getByRole("heading", { name: "Earn" })).toBeVisible();
+  await page.locator('a[aria-label="Back"]').click();
+  await expect(page).toHaveURL(/\/home$/);
+});
+
 test("deposit and withdrawal workflows render usable states", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.setViewportSize({ width: 390, height: 844 });
