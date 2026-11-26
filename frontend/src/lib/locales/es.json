@@ -1889,5 +1889,13 @@
   "No saved withdrawal address for this asset.": "No hay una dirección de retiro guardada para este activo.",
   "Add withdrawal address": "Añadir dirección de retiro",
   "No available withdrawal asset. Please contact support.": "No hay activos disponibles para retirar. Contacta con soporte.",
-  "This conversion quote has already been used. Request a new quote.": "Esta cotización de conversión ya se utilizó. Solicita una nueva."
+  "This conversion quote has already been used. Request a new quote.": "Esta cotización ya se utilizó. Solicita una nueva.",
+  "Conversion fee": "Comisión de conversión",
+  "Internal conversion is not available yet. No assets were moved.": "La conversión interna aún no está disponible. No se movieron activos.",
+  "One of the selected assets is not enabled for conversion.": "Uno de los activos seleccionados no está habilitado para conversión.",
+  "The amount exceeds the source asset precision.": "La cantidad supera la precisión admitida para el activo de origen.",
+  "The converted amount is below the supported precision.": "La cantidad convertida está por debajo de la precisión admitida.",
+  "Insufficient available balance. No conversion was made.": "Saldo disponible insuficiente. No se realizó la conversión.",
+  "This request ID was already used for a different conversion.": "Este ID de solicitud ya se utilizó para otra conversión.",
+  "The conversion was not confirmed. Check your asset balances before retrying.": "La conversión no se confirmó. Revisa tus saldos y el historial antes de volver a intentarlo."
 }
