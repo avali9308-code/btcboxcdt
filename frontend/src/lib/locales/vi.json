@@ -1883,5 +1883,6 @@
   "Live conversion prices are temporarily unavailable.": "Giá chuyển đổi trực tiếp hiện tạm thời không khả dụng.",
   "Conversion result is unconfirmed. Refresh your balances and check operation history before retrying.": "Chưa xác nhận được kết quả. Hãy làm mới số dư và kiểm tra lịch sử trước khi thử lại.",
   "Conversion completed.": "Đã chuyển đổi thành công.",
-  "This conversion was already processed.": "Yêu cầu chuyển đổi này đã được xử lý."
+  "This conversion was already processed.": "Yêu cầu chuyển đổi này đã được xử lý.",
+  "Loading wallet balances…": "Đang tải số dư ví…"
 }
