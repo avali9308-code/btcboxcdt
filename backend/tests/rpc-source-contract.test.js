@@ -35,7 +35,7 @@ test('every active backend PostgREST RPC call has a canonical SQL function defin
   const missing = [...activeCalls].filter((name) => !declared.has(name)).sort();
   assert.deepEqual(missing, [], 'active API calls without a canonical SQL definition');
   assert.ok(activeCalls.size >= 20, 'RPC inventory unexpectedly shrank; review route/source coverage');
-  assert.match(api, /\\/rest\\/v1\\/rpc\\/apply_internal_conversion_atomic/,
+  assert.ok(api.includes('/rest/v1/rpc/apply_internal_conversion_atomic'),
     'conversion API must use the dedicated atomic two-asset ledger operation');
 });
 
