@@ -54,7 +54,7 @@ test('conversion API validates signed user quote and invokes the atomic database
   assert.match(api, /p_quote_expires_at: quote\.expires_at/);
   assert.match(api, /FINANCIAL_INTERNAL_CONVERSION_ENABLED !== '1'/,
     'conversion quote and confirmation must remain disabled until explicitly enabled after review');
-  assert.match(api, /Internal conversion is not available yet\\. No assets were moved\\./);
+  assert.ok(api.includes('Internal conversion is not available yet. No assets were moved.'));
 });
 
 test('conversion output precision is floored to the destination asset decimal count', () => {
